@@ -7,4 +7,5 @@ public class Material
     public DateTime CreationDate { get; set; }
     public Content? Content { get; set; }
     public ContentCategory Category { get; set; }
+    public User? User { get; set; }
 }

@@ -4,5 +4,6 @@ public class Test
 {
     public long TestId { get; set; }
     public long MaterialId { get; set; }
+    public Material? Material { get; set; }
     public List<Question>? Questions { get; set; }
 }
