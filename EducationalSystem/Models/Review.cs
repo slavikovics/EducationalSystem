@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 
 namespace EducationalSystem.Models;
 
@@ -7,7 +9,7 @@ public class Review
     [Key]
     public long ReviewId { get; set; }
     
-    [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public ReviewType Type { get; set; }
     
     public long? ContentId { get; set; }

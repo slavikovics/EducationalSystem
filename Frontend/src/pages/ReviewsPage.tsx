@@ -88,6 +88,7 @@ export interface Review {
   contentId?: number;
   content?: Content;
   userId: number;
+  name: string;
   user?: User;
   createdAt: string;
   rating?: number; // Add rating field for star reviews
@@ -262,6 +263,7 @@ export const ReviewsPage: React.FC = () => {
     
     const reviewData: CreateReviewData = {
       type: reviewType,
+      rating: rating,
       text: reviewText.trim(),
       mediaFiles: mediaFiles.length > 0 ? mediaFiles : undefined,
     };
@@ -601,17 +603,6 @@ export const ReviewsPage: React.FC = () => {
                     className="pl-9"
                   />
                 </div>
-                
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full lg:w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Star">Star Reviews</SelectItem>
-                    <SelectItem value="Text">Text Reviews</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </CardContent>
@@ -730,15 +721,10 @@ export const ReviewsPage: React.FC = () => {
               <CardFooter className="pt-3 border-t">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
-                    {review.type === 'Star' ? (
+                    {review.type === 'Star' && (
                       <div className="text-sm text-muted-foreground">
                         Rated {review.rating || 0} out of 5
                       </div>
-                    ) : (
-                      <Button variant="ghost" size="sm" className="h-8">
-                        <ThumbsUp className="h-4 w-4 mr-1" />
-                        Helpful
-                      </Button>
                     )}
                   </div>
                   
@@ -793,97 +779,100 @@ export const ReviewsPage: React.FC = () => {
       )}
 
       {/* View Review Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Review Details</DialogTitle>
-            <DialogDescription>
-              Review ID: #{selectedReview?.reviewId}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedReview && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                <Avatar className="h-14 w-14">
-                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                    {getUserInitials(selectedReview.user?.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <div className="font-semibold">{selectedReview.user?.name || 'Anonymous User'}</div>
-                  <div className="text-sm text-muted-foreground">{selectedReview.user?.email}</div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {selectedReview.user?.role || 'User'}
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className={getReviewTypeColor(selectedReview.type)}
-                    >
-                      {getReviewTypeIcon(selectedReview.type)}
-                      {selectedReview.type} Review
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Review Date</Label>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(selectedReview.createdAt)}
-                </div>
-              </div>
-
-              {selectedReview.type === 'Star' && (
-                <div className="space-y-3">
-                  <Label>Rating</Label>
-                  <div className="flex items-center gap-2">
-                    {renderStars(selectedReview)}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <Label>Review Content</Label>
-                <div className="p-4 bg-muted/30 rounded-lg whitespace-pre-line">
-                  {selectedReview.content?.text || 'No content provided'}
-                </div>
-              </div>
-
-              {selectedReview.content?.mediaFiles && selectedReview.content.mediaFiles.length > 0 && (
-                <div className="space-y-3">
-                  <Label>Attachments ({selectedReview.content.mediaFiles.length})</Label>
-                  <div className="space-y-2">
-                    {selectedReview.content.mediaFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          {getFileIcon(file)}
-                          <div>
-                            <div className="font-medium text-sm">{extractFileName(file)}</div>
-                            <div className="text-xs text-muted-foreground truncate max-w-md">
-                              {file}
-                            </div>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={file} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+<Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Review Details</DialogTitle>
+      <DialogDescription>
+        Review ID: #{selectedReview?.reviewId}
+      </DialogDescription>
+    </DialogHeader>
+    
+    {selectedReview && (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+          <Avatar className="h-14 w-14">
+            <AvatarFallback className="bg-primary/10 text-primary text-lg">
+              {getUserInitials(selectedReview.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+            <div className="font-semibold">{selectedReview.name || 'Anonymous User'}</div>
+            <div className="text-sm text-muted-foreground">{selectedReview.user?.email}</div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {selectedReview.user?.role || 'User'}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={getReviewTypeColor(selectedReview.type)}
+              >
+                {getReviewTypeIcon(selectedReview.type)}
+                {selectedReview.type} Review
+              </Badge>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Review Date</Label>
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4" />
+            {formatDate(selectedReview.createdAt)}
+          </div>
+        </div>
+
+        {selectedReview.type === 'Star' && (
+          <div className="space-y-3">
+            <Label>Rating</Label>
+            <div className="flex items-center gap-2">
+              {renderStars(selectedReview)}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <Label>Review Content</Label>
+          <div className="p-4 bg-muted/30 rounded-lg whitespace-pre-line">
+            {selectedReview.content?.text || 'No content provided'}
+          </div>
+        </div>
+
+        {selectedReview.content?.mediaFiles && selectedReview.content.mediaFiles.length > 0 && (
+          <div className="space-y-3">
+            <Label>Attachments ({selectedReview.content.mediaFiles.length})</Label>
+            <div className="space-y-2">
+              {selectedReview.content.mediaFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {getFileIcon(file)}
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <div className="font-medium text-sm truncate">
+                        {extractFileName(file)}
+                      </div>
+                      {/* Updated: Truncated URL with ellipsis */}
+                      <div className="text-xs text-muted-foreground truncate max-w-80">
+                        {file}
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
+                    <a href={file} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

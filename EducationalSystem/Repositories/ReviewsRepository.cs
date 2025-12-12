@@ -52,6 +52,7 @@ public class ReviewsRepository : IReviewsRepository
     {
         var reviews = await _context.Reviews
             .Include(r => r.Content)
+            .Include(r => r.User)
             .OrderByDescending(r => r.ReviewId)
             .ToListAsync();
         
@@ -62,6 +63,7 @@ public class ReviewsRepository : IReviewsRepository
     {
         return await _context.Reviews
                    .Include(r => r.Content)
+                   .Include(r => r.User)
                    .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
                ?? throw new KeyNotFoundException("Review not found");
     }

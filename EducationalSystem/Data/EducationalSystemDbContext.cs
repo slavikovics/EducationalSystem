@@ -143,6 +143,11 @@ public class EducationalSystemDbContext : DbContext
             .WithOne()
             .HasForeignKey<Review>(r => r.ContentId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.User)
+            .WithMany(u => u.Reviews)
+            .HasForeignKey(r => r.UserId);
 
         // Configure Test
         modelBuilder.Entity<Test>()
