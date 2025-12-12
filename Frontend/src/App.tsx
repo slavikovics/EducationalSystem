@@ -14,7 +14,9 @@ import { ReviewsPage } from './pages/ReviewsPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ViewMaterialPage } from './pages/ViewMaterialPage';
 import { CreateMaterialPage } from './pages/CreateMaterialPage';
+import { EditMaterialContentPage } from './pages/UpdateContentPage';
 
 // Configure QueryClient with default options
 const queryClient = new QueryClient({
@@ -47,6 +49,14 @@ function App() {
                   <MainLayout />
                 </ProtectedRoute>
               }>
+                // In App.tsx, add this route:
+              <Route path="materials/:id" element={
+  <ProtectedRoute>
+    <ViewMaterialPage />
+  </ProtectedRoute>
+} />
+
+
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="materials" element={<MaterialsPage />} />
@@ -68,20 +78,16 @@ function App() {
                     </div>
                   </ProtectedRoute>
                 } />
-                
-                {/* Tutor-only routes */}
-                <Route path="tutor" element={
-                  <ProtectedRoute requiredRole="Tutor">
-                    <div className="p-6">
-                      <h1 className="text-2xl font-bold mb-4">Tutor Dashboard</h1>
-                      <p>Tutor-specific features and tools.</p>
-                    </div>
-                  </ProtectedRoute>
-                } />
 
                 <Route path="materials/create" element={
                   <ProtectedRoute requiredRole="Tutor">
                     <CreateMaterialPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/materials/:id/edit" element={
+                  <ProtectedRoute requiredRole="Tutor">
+                    <EditMaterialContentPage />
                   </ProtectedRoute>
                 } />
                 

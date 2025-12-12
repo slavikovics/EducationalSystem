@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using EducationalSystem.DTOs;
 using EducationalSystem.Models;
 using EducationalSystem.Services;
@@ -134,7 +135,7 @@ public class MaterialController : ControllerBase
     }
 
     [HttpPut("{id}/content")]
-    public async Task<IActionResult> UpdateContent(long id, [FromBody] Dictionary<string, object> newData)
+    public async Task<IActionResult> UpdateContent(long id, [FromBody] Content newContent)
     {
         try
         {
@@ -148,7 +149,7 @@ public class MaterialController : ControllerBase
                 return Forbid();
             }
 
-            var updatedMaterial = await _materialService.UpdateContent(id, newData);
+            var updatedMaterial = await _materialService.UpdateContent(id, newContent);
             return Ok(updatedMaterial);
         }
         catch (KeyNotFoundException ex)
@@ -184,10 +185,12 @@ public class MaterialController : ControllerBase
         try
         {
             var material = await _materialService.GetMaterialById(id);
+            _logger.LogInformation($"Returning {JsonSerializer.Serialize(material)} materials");
             return Ok(material);
         }
         catch (KeyNotFoundException ex)
         {
+            _logger.LogError(ex, "Failed to get material by id");
             return NotFound(new { Error = ex.Message });
         }
     }

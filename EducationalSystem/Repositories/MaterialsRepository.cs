@@ -56,22 +56,14 @@ public class MaterialsRepository : IMaterialsRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Material> UpdateContent(long materialId, Dictionary<string, object> newData)
+    public async Task<Material> UpdateContent(long materialId, Content newContent)
     {
         var material = await _context.Materials
                            .Include(m => m.Content)
                            .FirstOrDefaultAsync(m => m.MaterialId == materialId)
                        ?? throw new KeyNotFoundException("Material not found");
 
-        material.Content ??= new Content
-        {
-            Text = ""
-        };
-
-        foreach (var kvp in newData)
-        {
-            material.Content.Text += kvp.Value.ToString();
-        }
+        material.Content = newContent;
 
         await _context.SaveChangesAsync();
         return material;

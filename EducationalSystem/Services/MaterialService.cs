@@ -37,8 +37,8 @@ public class MaterialService : IMaterialService
         return await _materialsRepository.GetMaterialsByUserId(userId);
     }
 
-    public async Task<Material> UpdateContent(long materialId, Dictionary<string, object> newData)
+    public async Task<Material> UpdateContent(long materialId, Content newContent)
     {
-        return await _materialsRepository.UpdateContent(materialId, newData);
+        return await _materialsRepository.UpdateContent(materialId, newContent);
     }
 }

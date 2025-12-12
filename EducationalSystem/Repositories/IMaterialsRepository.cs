@@ -9,5 +9,5 @@ public interface IMaterialsRepository
     Task<List<Material>> GetAllMaterials();
     Task<Material> GetMaterialById(long id);
     Task<List<Material>> GetMaterialsByUserId(long userId);
-    Task<Material> UpdateContent(long materialId, Dictionary<string, object> newData);
+    Task<Material> UpdateContent(long materialId, Content newContent);
 }

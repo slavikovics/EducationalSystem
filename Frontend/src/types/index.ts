@@ -34,27 +34,43 @@ export interface Content {
 
 // Material Types
 export enum ContentCategory {
-  Lecture = 'Lecture',
-  Exercise = 'Exercise',
-  Project = 'Project',
-  Reading = 'Reading',
-  Video = 'Video',
-  Other = 'Other'
+  Science = 'Science',
+  Art = 'Art',
+  Technology = 'Technology',
+  Business = 'Business',
+  Health = 'Health'
 }
 
 export interface Material {
-  materialId?: number;
-  userId?: number;
-  creationDate?: string;
-  content?: Content;
-  contentId?: number;
-  category?: ContentCategory | string;
-  user?: User;
-  test?: Test;
-  reviews?: Review[];
-  createdAt?: string;
-  updatedAt?: string;
+  MaterialId: number;
+  CreationDate: string;
+  ContentId?: number;
+  Content?: {
+    ContentId?: number;
+    Text: string;
+    MediaFiles: string[];
+    Category?: ContentCategory | string | number;
+  };
+  UserId: number;
+  User?: any;
+  Test?: any;
+  Category?: ContentCategory | string | number;
 }
+
+export const mapApiMaterial = (apiMaterial: any): Material => ({
+  ...apiMaterial,
+  // If Category is a number, map it to string
+  Category: typeof apiMaterial.Category === 'number' 
+    ? ContentCategory[apiMaterial.Category as keyof typeof ContentCategory]
+    : apiMaterial.Category,
+  // Ensure Content.Category is also mapped
+  Content: apiMaterial.Content ? {
+    ...apiMaterial.Content,
+    Category: typeof apiMaterial.Content?.Category === 'number'
+      ? ContentCategory[apiMaterial.Content.Category as keyof typeof ContentCategory]
+      : apiMaterial.Content?.Category
+  } : undefined
+});
 
 // Question Types
 export interface Question {
