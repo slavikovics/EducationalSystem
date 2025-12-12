@@ -1,8 +1,10 @@
-﻿namespace EducationalSystem.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EducationalSystem.Models;
 
 public class Content
 {
-    public long ContentId { get; set; }
-    public required string Text { get; set; }
-    public List<string>? MediaFiles { get; set; }
+    [Key] public long ContentId { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public List<string>? MediaFiles { get; set; } = new();
 }

@@ -1,6 +1,14 @@
-﻿namespace EducationalSystem.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EducationalSystem.Models;
 
 public class Admin : User
 {
-    public required string AccessKey { get; set; }
+    [Required]
+    public string AccessKey { get; set; } = string.Empty;
+    
+    public Admin()
+    {
+        UserType = "Admin";
+    }
 }

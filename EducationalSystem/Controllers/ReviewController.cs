@@ -22,6 +22,7 @@ public class ReviewController : ControllerBase
     }
 
     [HttpGet("create-form")]
+    [Authorize]
     public IActionResult GetCreateReviewForm()
     {
         return Ok(new
@@ -32,18 +33,18 @@ public class ReviewController : ControllerBase
     }
 
     [HttpPost]
-    public IActionResult CreateReview([FromBody] CreateReviewRequest request)
+    public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest request)
     {
         try
         {
-            var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var content = new Content
             {
                 Text = request.Text,
                 MediaFiles = request.MediaFiles
             };
 
-            var review = _reviewService.CreateReview(userId, request.Type, content);
+            var review = await _reviewService.CreateReview(userId, request.Type, content);
             return CreatedAtAction(nameof(GetReviewById), new { id = review.ReviewId }, review);
         }
         catch (Exception ex)
@@ -55,16 +56,12 @@ public class ReviewController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
-    public IActionResult DeleteReview(long id, [FromQuery] string accessKey)
+    public async Task<IActionResult> DeleteReview(long id)
     {
         try
         {
-            _reviewService.DeleteReview(id, accessKey);
+            await _reviewService.DeleteReview(id);
             return Ok(new { Message = $"Review {id} deleted successfully" });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { Error = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -78,11 +75,11 @@ public class ReviewController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAllReviews()
+    public async Task<IActionResult> GetAllReviews()
     {
         try
         {
-            var reviews = _reviewService.GetAllReviews();
+            var reviews = await _reviewService.GetAllReviews();
             return Ok(reviews);
         }
         catch (Exception ex)
@@ -94,11 +91,11 @@ public class ReviewController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetReviewById(long id)
+    public async Task<IActionResult> GetReviewById(long id)
     {
         try
         {
-            var review = _reviewService.GetReviewById(id);
+            var review = await _reviewService.GetReviewById(id);
             return Ok(review);
         }
         catch (KeyNotFoundException ex)
@@ -108,12 +105,12 @@ public class ReviewController : ControllerBase
     }
 
     [HttpGet("{id}/edit-form")]
-    public IActionResult GetEditContentForm(long id)
+    public async Task<IActionResult> GetEditContentForm(long id)
     {
         try
         {
-            var review = _reviewService.GetReviewById(id);
-            var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var review = await _reviewService.GetReviewById(id);
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             if (review.UserId != userId && !User.IsInRole("Admin"))
             {
@@ -133,19 +130,19 @@ public class ReviewController : ControllerBase
     }
 
     [HttpPut("{id}/content")]
-    public IActionResult UpdateContent(long id, [FromBody] Dictionary<string, object> newData)
+    public async Task<IActionResult> UpdateContent(long id, [FromBody] Dictionary<string, object> newData)
     {
         try
         {
-            var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var review = _reviewService.GetReviewById(id);
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var review = await _reviewService.GetReviewById(id);
 
             if (review.UserId != userId && !User.IsInRole("Admin"))
             {
                 return Forbid();
             }
 
-            var updatedReview = _reviewService.UpdateContent(id, newData);
+            var updatedReview = await _reviewService.UpdateContent(id, newData);
             return Ok(updatedReview);
         }
         catch (KeyNotFoundException ex)

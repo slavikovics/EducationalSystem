@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using EducationalSystem.DTOs;
 using EducationalSystem.Models;
 using EducationalSystem.Services;
@@ -33,11 +34,12 @@ public class TestController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Tutor,Admin")]
-    public IActionResult CreateTest([FromBody] CreateTestRequest request)
+    public async Task<IActionResult> CreateTest([FromBody] CreateTestRequest request)
     {
         try
         {
-            var test = _testService.CreateTest(request.MaterialId, request.Questions);
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var test = await _testService.CreateTest(request.MaterialId, request.Questions, userId);
             return CreatedAtAction(nameof(GetTestById), new { id = test.TestId }, test);
         }
         catch (Exception ex)
@@ -49,11 +51,11 @@ public class TestController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Tutor,Admin")]
-    public IActionResult DeleteTest(long id)
+    public async Task<IActionResult> DeleteTest(long id)
     {
         try
         {
-            _testService.DeleteTest(id);
+            await _testService.DeleteTest(id);
             return Ok(new { Message = $"Test {id} deleted successfully" });
         }
         catch (KeyNotFoundException ex)
@@ -68,11 +70,11 @@ public class TestController : ControllerBase
 
     [HttpGet("{id}/edit-form")]
     [Authorize(Roles = "Tutor,Admin")]
-    public IActionResult GetEditQuestionsForm(long id)
+    public async Task<IActionResult> GetEditQuestionsForm(long id)
     {
         try
         {
-            var test = _testService.GetTestById(id);
+            var test = await _testService.GetTestById(id);
             return Ok(new
             {
                 Test = test,
@@ -87,12 +89,38 @@ public class TestController : ControllerBase
 
     [HttpPut("{id}/questions")]
     [Authorize(Roles = "Tutor,Admin")]
-    public IActionResult UpdateQuestions(long id, [FromBody] List<Question> newQuestions)
+    public async Task<IActionResult> UpdateQuestions(long id, [FromBody] List<Question> newQuestions)
     {
         try
         {
-            var updatedTest = _testService.UpdateQuestions(id, newQuestions);
+            var updatedTest = await _testService.UpdateQuestions(id, newQuestions);
             return Ok(updatedTest);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("{testId}/submit")]
+    [Authorize(Roles = "User,Student,Tutor,Admin")] // Any authenticated user can take tests
+    public async Task<IActionResult> SubmitTest(long testId, [FromBody] TestSubmissionDto submission)
+    {
+        try
+        {
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _testService.SubmitTest(testId, userId, submission.Answers);
+
+            return Ok(new
+            {
+                Score = result.Score,
+                TotalQuestions = result.TotalQuestions,
+                Passed = result.Score >= result.PassingScore
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -106,11 +134,11 @@ public class TestController : ControllerBase
 
     [HttpGet("material/{materialId}")]
     [AllowAnonymous]
-    public IActionResult GetTestByMaterialId(long materialId)
+    public async Task<IActionResult> GetTestByMaterialId(long materialId)
     {
         try
         {
-            var test = _testService.GetTestByMaterialId(materialId);
+            var test = await _testService.GetTestByMaterialId(materialId);
             return Ok(test);
         }
         catch (KeyNotFoundException ex)
@@ -121,11 +149,11 @@ public class TestController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAllTests()
+    public async Task<IActionResult> GetAllTests()
     {
         try
         {
-            var tests = _testService.GetAllTests();
+            var tests = await _testService.GetAllTests();
             return Ok(tests);
         }
         catch (Exception ex)
@@ -137,11 +165,11 @@ public class TestController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetTestById(long id)
+    public async Task<IActionResult> GetTestById(long id)
     {
         try
         {
-            var test = _testService.GetTestById(id);
+            var test = await _testService.GetTestById(id);
             return Ok(test);
         }
         catch (KeyNotFoundException ex)

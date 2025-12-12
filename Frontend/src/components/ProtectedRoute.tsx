@@ -12,9 +12,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredRole 
 }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -26,8 +26,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/" />;
+  if (requiredRole) {
+    // Check if user has required role
+    const userRole = user?.role || user?.userType;
+    
+    if (requiredRole === 'Admin' && userRole !== 'Admin') {
+      return <Navigate to="/" />;
+    }
+    
+    if (requiredRole === 'Tutor' && !['Tutor', 'Admin'].includes(userRole || '')) {
+      return <Navigate to="/" />;
+    }
+    
+    if (requiredRole === 'User' && !['User', 'Tutor', 'Admin'].includes(userRole || '')) {
+      return <Navigate to="/" />;
+    }
   }
 
   return <>{children}</>;

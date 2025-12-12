@@ -1,11 +1,23 @@
-﻿namespace EducationalSystem.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EducationalSystem.Models;
 
 public class Material
 {
+    [Key]
     public long MaterialId { get; set; }
-    public long UserId { get; set; }
+    
+    [Required]
     public DateTime CreationDate { get; set; }
-    public Content? Content { get; set; }
-    public ContentCategory Category { get; set; }
-    public User? User { get; set; }
+    
+    public long? ContentId { get; set; }
+    public virtual Content? Content { get; set; }
+    
+    public long UserId { get; set; }
+    
+    public virtual User? User { get; set; }
+    
+    public virtual Test? Test { get; set; }
+    
+    public ContentCategory? Category { get; set; }
 }

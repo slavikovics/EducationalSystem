@@ -12,28 +12,28 @@ public class ReviewService : IReviewService
         _reviewsRepository = reviewsRepository;
     }
 
-    public Review CreateReview(long userId, ReviewType type, Content content)
+    public async Task<Review> CreateReview(long userId, ReviewType type, Content content)
     {
-        return _reviewsRepository.CreateReview(userId, type, content);
+        return await _reviewsRepository.CreateReview(userId, type, content);
     }
 
-    public void DeleteReview(long reviewId, string accessKey)
+    public async Task DeleteReview(long reviewId)
     {
-        _reviewsRepository.DeleteReview(reviewId, accessKey);
+        await _reviewsRepository.DeleteReview(reviewId);
     }
 
-    public List<Review> GetAllReviews()
+    public async Task<List<Review>> GetAllReviews()
     {
-        return _reviewsRepository.GetAllReviews();
+        return await _reviewsRepository.GetAllReviews();
     }
 
-    public Review GetReviewById(long reviewId)
+    public async Task<Review> GetReviewById(long reviewId)
     {
-        return _reviewsRepository.GetReviewById(reviewId);
+        return await _reviewsRepository.GetReviewById(reviewId);
     }
 
-    public Review UpdateContent(long reviewId, Dictionary<string, object> newData)
+    public async Task<Review> UpdateContent(long reviewId, Dictionary<string, object> newData)
     {
-        return _reviewsRepository.UpdateContent(reviewId, newData);
+        return await _reviewsRepository.UpdateContent(reviewId, newData);
     }
 }

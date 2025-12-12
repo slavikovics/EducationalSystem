@@ -1,3 +1,5 @@
+using System.Security.Claims;
+
 namespace EducationalSystem.Middleware;
 
 public class RoleCheckMiddleware
@@ -13,11 +15,21 @@ public class RoleCheckMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        var user = context.User;
+        var userName = user.Identity?.Name ?? "Anonymous";
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown";
+        var userRoles = user.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToList();
+
         _logger.LogInformation(
-            "Access attempt: {Method} {Path} by User: {User}",
+            "Access attempt: {Method} {Path} by User: {UserName} (ID: {UserId}) with Roles: {Roles}",
             context.Request.Method,
             context.Request.Path,
-            context.User.Identity?.Name ?? "Anonymous");
+            userName,
+            userId,
+            string.Join(", ", userRoles));
 
         await _next(context);
     }

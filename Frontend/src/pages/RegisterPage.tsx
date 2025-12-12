@@ -1,86 +1,121 @@
+// src/pages/RegisterPage.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+
+// Import shadcn/ui components
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Alert,
+  AlertDescription,
+} from '../components/ui/alert';
+
+// Define validation schema with Zod
+const registerSchema = z.object({
+  name: z.string()
+    .min(1, { message: "Name is required" })
+    .min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Please enter a valid email address" }),
+  password: z.string()
+    .min(1, { message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters" })
+    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
+  confirmPassword: z.string()
+    .min(1, { message: "Please confirm your password" }),
+  role: z.enum(['User', 'Tutor', 'Admin']),
+  // Admin-specific fields (conditionally required)
+  accessKey: z.string().optional(),
+  // Tutor-specific fields (conditionally required)
+  experience: z.coerce.number().optional(),
+  specialty: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+}).refine((data) => {
+  if (data.role === 'Admin') {
+    return data.accessKey && data.accessKey.length > 0;
+  }
+  return true;
+}, {
+  message: "Access key is required for Admin registration",
+  path: ["accessKey"],
+}).refine((data) => {
+  if (data.role === 'Tutor') {
+    return data.experience !== undefined && data.experience >= 0 && data.specialty && data.specialty.length > 0;
+  }
+  return true;
+}, {
+  message: "Experience and specialty are required for Tutor registration",
+  path: ["experience"],
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const RegisterPage: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'User' as 'User' | 'Tutor' | 'Admin',
-  });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { 
+    registerUser, 
+    registerAdmin, 
+    registerTutor 
+  } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    setValue,
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'User',
+      accessKey: '',
+      experience: 0,
+      specialty: '',
+    },
+  });
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      setError('Name is required');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      setError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await register(formData.email, formData.password, formData.name);
-      setSuccess('Registration successful! Redirecting to dashboard...');
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const selectedRole = watch('role');
+  const password = watch('password');
+  const confirmPassword = watch('confirmPassword');
 
   const passwordStrength = () => {
-    const { password } = formData;
+    if (!password) return 0;
     let strength = 0;
     if (password.length >= 8) strength++;
     if (/[a-z]/.test(password)) strength++;
@@ -104,244 +139,340 @@ export const RegisterPage: React.FC = () => {
     return 'Strong';
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="px-8 py-10">
-            <div className="text-center mb-8">
-              <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white mb-4">
-                <BookOpen className="h-8 w-8" />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Create Account
-              </h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Join our educational platform
-              </p>
-            </div>
+  const onSubmit = async (data: RegisterFormData) => {
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
 
+    try {
+      switch (data.role) {
+        case 'Admin':
+          await registerAdmin({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            accessKey: data.accessKey || ''
+          });
+          break;
+        
+        case 'Tutor':
+          await registerTutor({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            experience: data.experience || 0,
+            specialty: data.specialty || ''
+          });
+          break;
+        
+        default: // User
+          await registerUser({
+            name: data.name,
+            email: data.email,
+            password: data.password
+          });
+      }
+      
+      setSuccess('Registration successful! Redirecting to dashboard...');
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/30 p-4">
+      <div className="w-full max-w-md">
+        {/* Logo and Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/70 mb-4">
+            <BookOpen className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">EduSystem</h1>
+          <p className="text-muted-foreground mt-2">
+            Join our educational platform
+          </p>
+        </div>
+
+        {/* Main Register Card */}
+        <Card className="shadow-lg border-border/40">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+            <CardDescription className="text-center">
+              Enter your information to create an account
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
             {error && (
-              <div className="mb-6 rounded-lg bg-red-50 p-4 border border-red-200">
-                <div className="flex">
-                  <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">{error}</h3>
-                  </div>
-                </div>
-              </div>
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             {success && (
-              <div className="mb-6 rounded-lg bg-green-50 p-4 border border-green-200">
-                <div className="flex">
-                  <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-green-800">{success}</h3>
-                  </div>
-                </div>
-              </div>
+              <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
-                <input
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
                   id="name"
-                  name="name"
                   type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="John Doe"
-                  required
+                  {...register('name')}
+                  className={errors.name ? "border-destructive" : ""}
+                  disabled={isLoading}
                 />
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                )}
               </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
-                </label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
                   id="email"
-                  name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="john@example.com"
-                  required
+                  {...register('email')}
+                  className={errors.email ? "border-destructive" : ""}
+                  disabled={isLoading}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
               </div>
 
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                  Role
-                </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select 
+                  onValueChange={(value: 'User' | 'Tutor' | 'Admin') => setValue('role', value)}
+                  defaultValue="User"
+                  disabled={isLoading}
                 >
-                  <option value="User">Student</option>
-                  <option value="Tutor">Tutor</option>
-                  <option value="Admin">Administrator</option>
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  * Admin role requires special approval
+                  <SelectTrigger className={errors.role ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="User">Student</SelectItem>
+                    <SelectItem value="Tutor">Tutor</SelectItem>
+                    <SelectItem value="Admin">Administrator</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {selectedRole === 'Admin' 
+                    ? '* Admin role requires access key' 
+                    : selectedRole === 'Tutor'
+                    ? '* Tutor role requires experience and specialty'
+                    : '* Student role is default for all users'}
                 </p>
+                {errors.role && (
+                  <p className="text-sm text-destructive">{errors.role.message}</p>
+                )}
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pr-12"
-                    placeholder="••••••••"
-                    required
+              {/* Admin-specific fields */}
+              {selectedRole === 'Admin' && (
+                <div className="space-y-2">
+                  <Label htmlFor="accessKey">Access Key *</Label>
+                  <Input
+                    id="accessKey"
+                    type="text"
+                    placeholder="Enter admin access key"
+                    {...register('accessKey')}
+                    className={errors.accessKey ? "border-destructive" : ""}
+                    disabled={isLoading}
                   />
-                  <button
+                  {errors.accessKey && (
+                    <p className="text-sm text-destructive">{errors.accessKey.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Tutor-specific fields */}
+              {selectedRole === 'Tutor' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="experience">Years of Experience *</Label>
+                    <Input
+                      id="experience"
+                      type="number"
+                      min="0"
+                      placeholder="5"
+                      {...register('experience')}
+                      className={errors.experience ? "border-destructive" : ""}
+                      disabled={isLoading}
+                    />
+                    {errors.experience && (
+                      <p className="text-sm text-destructive">{errors.experience.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="specialty">Specialty *</Label>
+                    <Input
+                      id="specialty"
+                      type="text"
+                      placeholder="Mathematics, Computer Science, etc."
+                      {...register('specialty')}
+                      className={errors.specialty ? "border-destructive" : ""}
+                      disabled={isLoading}
+                    />
+                    {errors.specialty && (
+                      <p className="text-sm text-destructive">{errors.specialty.message}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    {...register('password')}
+                    className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                    disabled={isLoading}
+                  />
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    disabled={isLoading}
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="sr-only">
+                      {showPassword ? "Hide password" : "Show password"}
+                    </span>
+                  </Button>
                 </div>
                 
-                {formData.password && (
-                  <div className="mt-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-medium text-gray-600">
+                {password && (
+                  <div className="space-y-2 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium">
                         Password Strength: {getPasswordStrengthText()}
                       </span>
-                      <span className="text-xs font-medium text-gray-600">
+                      <span className="text-xs font-medium">
                         {passwordStrength()}/5
                       </span>
                     </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className={`h-full ${getPasswordStrengthColor()} transition-all duration-300`}
                         style={{ width: `${(passwordStrength() / 5) * 100}%` }}
                       />
                     </div>
-                    <ul className="mt-2 space-y-1">
-                      <li className="flex items-center text-xs">
-                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center">
+                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${password.length >= 8 ? 'bg-green-500' : 'bg-muted'}`} />
                         At least 8 characters
-                      </li>
-                      <li className="flex items-center text-xs">
-                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[a-z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      </div>
+                      <div className="flex items-center">
+                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[a-z]/.test(password) ? 'bg-green-500' : 'bg-muted'}`} />
                         One lowercase letter
-                      </li>
-                      <li className="flex items-center text-xs">
-                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[A-Z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      </div>
+                      <div className="flex items-center">
+                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[A-Z]/.test(password) ? 'bg-green-500' : 'bg-muted'}`} />
                         One uppercase letter
-                      </li>
-                      <li className="flex items-center text-xs">
-                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      </div>
+                      <div className="flex items-center">
+                        <div className={`h-1.5 w-1.5 rounded-full mr-2 ${/[0-9]/.test(password) ? 'bg-green-500' : 'bg-muted'}`} />
                         One number
-                      </li>
-                    </ul>
+                      </div>
+                    </div>
                   </div>
+                )}
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
                 )}
               </div>
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password *
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pr-12"
-                    placeholder="••••••••"
-                    required
+                    type={showConfirmPassword ? "text" : "password"}
+                    {...register('confirmPassword')}
+                    className={errors.confirmPassword ? "border-destructive pr-10" : "pr-10"}
+                    disabled={isLoading}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    disabled={isLoading}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="sr-only">
+                      {showConfirmPassword ? "Hide password" : "Show password"}
+                    </span>
+                  </Button>
                 </div>
-                {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                  <p className="mt-2 text-sm text-green-600 flex items-center">
+                {confirmPassword && password === confirmPassword && (
+                  <p className="text-sm text-green-600 flex items-center">
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Passwords match
                   </p>
                 )}
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                )}
               </div>
 
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  name="terms"
-                  type="checkbox"
-                  required
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                  I agree to the{' '}
-                  <a href="#" className="text-blue-600 hover:text-blue-500 font-medium">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="text-blue-600 hover:text-blue-500 font-medium">
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
               >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                {isLoading ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     Creating Account...
-                  </div>
+                  </>
                 ) : (
                   'Create Account'
                 )}
-              </button>
+              </Button>
             </form>
+          </CardContent>
 
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                  Sign in here
-                </Link>
-              </p>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="text-primary font-medium underline-offset-4 hover:underline"
+              >
+                Sign in here
+              </Link>
             </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                By creating an account, you agree to our platform rules and regulations.
-                All user data is protected under GDPR compliance.
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

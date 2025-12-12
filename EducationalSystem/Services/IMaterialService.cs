@@ -4,10 +4,10 @@ namespace EducationalSystem.Services;
 
 public interface IMaterialService
 {
-    Material CreateMaterial(long userId, DateTime creationDate, Content content);
-    void DeleteMaterial(long materialId);
-    Material UpdateContent(long materialId, Dictionary<string, object> newData);
-    List<Material> GetAllMaterials();
-    Material GetMaterialById(long id);
-    List<Material> GetMaterialsByUserId(long userId);
+    Task<Material> CreateMaterial(long userId, DateTime createdAt, Content content, ContentCategory category);
+    Task DeleteMaterial(long id);
+    Task<Material> GetMaterialById(long id);
+    Task<Material> UpdateContent(long id, Dictionary<string, object> newData);
+    Task<List<Material>> GetAllMaterials();
+    Task<List<Material>> GetMaterialsByUserId(long userId);
 }

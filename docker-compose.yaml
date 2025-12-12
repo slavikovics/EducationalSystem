@@ -1,19 +1,20 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  postgres:
+    image: postgres:16-alpine
     container_name: educational-system-db
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=12345Aa@
-      - MSSQL_PID=Express
+      - POSTGRES_DB=EducationalDB
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345Aa@
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - sqlserver_data:/var/opt/mssql
+      - postgres_data:/var/lib/postgresql/data
+
     networks:
       - educational-network
     healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourStrong!Passw0rd" -Q "SELECT 1" || exit 1
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,12 +30,12 @@ services:
       - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EducationalDB;User Id=sa;Password=12345Aa@;TrustServerCertificate=true;
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=EducationalDB;Username=postgres;Password=12345Aa@;
       - ASPNETCORE_URLS=http://+:8080;https://+:8081
       - ASPNETCORE_Kestrel__Certificates__Default__Password=
       - ASPNETCORE_Kestrel__Certificates__Default__Path=
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
     networks:
       - educational-network
@@ -45,4 +46,4 @@ networks:
     driver: bridge
 
 volumes:
-  sqlserver_data:
+  postgres_data:

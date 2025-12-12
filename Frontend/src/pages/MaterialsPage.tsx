@@ -1,348 +1,388 @@
 // src/pages/MaterialsPage.tsx
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { materialsAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, Edit, Trash2, Eye, Download } from 'lucide-react';
-import { format } from 'date-fns';
+import { materialsAPI } from '../services/api';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle, 
+  CardFooter 
+} from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { 
+  AlertCircle, 
+  BookOpen, 
+  Calendar, 
+  Edit, 
+  Trash2, 
+  User,
+  Video,
+  Image,
+  FileText,
+  Plus
+} from 'lucide-react';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import { Skeleton } from '../components/ui/skeleton';
+
+interface Material {
+  materialId: number;
+  userId: number;
+  userName?: string;
+  createdAt: string;
+  content: {
+    text: string;
+    mediaFiles: string[];
+    category: string;
+  };
+}
 
 export const MaterialsPage: React.FC = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [materialToDelete, setMaterialToDelete] = useState<number | null>(null);
 
-  // Fetch materials
-  const { data: materials, isLoading } = useQuery({
-    queryKey: ['materials'],
-    queryFn: () => materialsAPI.getAll(),
-  });
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => materialsAPI.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-    },
-  });
-
-  const filteredMaterials = materials?.data?.filter((material: any) => {
-    const matchesSearch = material.content?.text
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesCategory = category === 'all' || material.category === category;
-    return matchesSearch && matchesCategory;
-  });
-
-  const categories = [
-    'Science',
-    'Art',
-    'Technology',
-    'Business',
-    'Health',
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Materials</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Manage and create educational materials
-          </p>
-        </div>
-        {user?.role === 'Tutor' || user?.role === 'Admin' ? (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Material
-          </button>
-        ) : null}
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search materials..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-400" />
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Materials Grid */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMaterials?.map((material: any) => (
-            <div
-              key={material.materialId}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {material.category}
-                    </span>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {format(new Date(material.creationDate), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="p-1 hover:bg-gray-100 rounded">
-                      <Eye className="h-4 w-4 text-gray-600" />
-                    </button>
-                    {(user?.role === 'Tutor' || user?.role === 'Admin') && (
-                      <>
-                        <button className="p-1 hover:bg-gray-100 rounded">
-                          <Edit className="h-4 w-4 text-gray-600" />
-                        </button>
-                        <button
-                          onClick={() => deleteMutation.mutate(material.materialId)}
-                          className="p-1 hover:bg-red-50 rounded text-red-600"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {material.content?.text.substring(0, 100)}
-                  {material.content?.text.length > 100 ? '...' : ''}
-                </h3>
-                
-                {material.content?.mediaFiles?.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm text-gray-600 mb-2">Media files:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {material.content.mediaFiles.map((file: string, index: number) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          File {index + 1}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="mt-6 pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {material.user?.name?.charAt(0) || 'U'}
-                        </span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">
-                          {material.user?.name || 'Unknown'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {material.user?.role || 'User'}
-                        </p>
-                      </div>
-                    </div>
-                    <button className="text-sm text-primary hover:text-primary/90 font-medium">
-                      View Details →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create Material Modal */}
-      {showCreateModal && (
-        <CreateMaterialModal onClose={() => setShowCreateModal(false)} />
-      )}
-    </div>
-  );
-};
-
-// Create Material Modal Component
-const CreateMaterialModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [text, setText] = useState('');
-  const [category, setCategory] = useState('Science');
-  const [mediaFiles, setMediaFiles] = useState<string[]>([]);
-  const [newFile, setNewFile] = useState('');
-  const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => materialsAPI.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      onClose();
-    },
-  });
-
-  const addFile = () => {
-    if (newFile.trim()) {
-      setMediaFiles([...mediaFiles, newFile.trim()]);
-      setNewFile('');
+  const fetchMaterials = async () => {
+    try {
+      setIsLoading(true);
+      const response = await materialsAPI.getAllMaterials();
+      console.log('Materials response:', response);
+      
+      if (response.data) {
+        setMaterials(response.data);
+      } else {
+        setMaterials(response);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch materials:', error);
+      setError(error.message || 'Failed to load materials');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const removeFile = (index: number) => {
-    setMediaFiles(mediaFiles.filter((_, i) => i !== index));
+  const handleDelete = async (materialId: number) => {
+    try {
+      await materialsAPI.deleteMaterial(materialId);
+      setMaterials(materials.filter(m => m.materialId !== materialId));
+      setDeleteDialogOpen(false);
+      setMaterialToDelete(null);
+    } catch (error: any) {
+      console.error('Failed to delete material:', error);
+      setError(error.message || 'Failed to delete material');
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({
-      text,
-      category,
-      mediaFiles: mediaFiles.length > 0 ? mediaFiles : undefined,
+  const openDeleteDialog = (materialId: number) => {
+    setMaterialToDelete(materialId);
+    setDeleteDialogOpen(true);
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category?.toLowerCase()) {
+      case 'video':
+        return <Video className="h-4 w-4" />;
+      case 'image':
+        return <Image className="h-4 w-4" />;
+      case 'document':
+        return <FileText className="h-4 w-4" />;
+      default:
+        return <BookOpen className="h-4 w-4" />;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Create New Material
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              ×
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
-              </label>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter material content..."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="Science">Science</option>
-                <option value="Art">Art</option>
-                <option value="Technology">Technology</option>
-                <option value="Business">Business</option>
-                <option value="Health">Health</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Media Files (Optional)
-              </label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={newFile}
-                  onChange={(e) => setNewFile(e.target.value)}
-                  placeholder="Enter file URL..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button
-                  type="button"
-                  onClick={addFile}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                >
-                  Add
-                </button>
-              </div>
-              {mediaFiles.length > 0 && (
-                <div className="space-y-2">
-                  {mediaFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
-                    >
-                      <span className="text-sm text-gray-600 truncate">
-                        {file}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 border-t">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
-              >
-                {createMutation.isPending ? 'Creating...' : 'Create Material'}
-              </button>
-            </div>
-          </form>
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">Materials</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Educational Materials</h1>
+          <p className="text-muted-foreground mt-2">
+            Browse and manage educational content
+          </p>
+        </div>
+        
+        {(user?.role === 'Admin' || user?.role === 'Tutor') && (
+          <Button onClick={() => window.location.href = '/materials/create'}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Material
+          </Button>
+        )}
+      </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {materials.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold">No materials available</h3>
+              <p className="text-muted-foreground mt-2">
+                {user?.role === 'Admin' || user?.role === 'Tutor' 
+                  ? 'Start by adding your first educational material'
+                  : 'Check back later for new content'
+                }
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Desktop View */}
+          <div className="hidden lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title/Description</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Media Files</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {materials.map((material) => (
+                  <TableRow key={material.materialId}>
+                    <TableCell>
+                      <div className="max-w-md">
+                        <p className="font-medium line-clamp-2">
+                          {material.content.text || 'No description'}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                        {getCategoryIcon(material.content.category)}
+                        {material.content.category || 'Uncategorized'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{material.userName || `User ${material.userId}`}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{formatDate(material.createdAt)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {material.content.mediaFiles?.length > 0 ? (
+                        <div className="flex gap-1">
+                          {material.content.mediaFiles.slice(0, 3).map((file, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {file.split('/').pop()?.split('?')[0] || 'File'}
+                            </Badge>
+                          ))}
+                          {material.content.mediaFiles.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{material.content.mediaFiles.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No files</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.location.href = `/materials/${material.materialId}`}
+                        >
+                          <BookOpen className="h-4 w-4" />
+                        </Button>
+                        {(user?.role === 'Admin' || user?.role === 'Tutor') && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.location.href = `/admin/materials/${material.materialId}/edit`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => openDeleteDialog(material.materialId)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile/Tablet View */}
+          <div className="lg:hidden space-y-4">
+            {materials.map((material) => (
+              <Card key={material.materialId}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="line-clamp-2">
+                        {material.content.text?.substring(0, 100) || 'Material'}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2 mt-2">
+                        <User className="h-3 w-3" />
+                        {material.userName || `User ${material.userId}`}
+                        <span>•</span>
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(material.createdAt)}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      {getCategoryIcon(material.content.category)}
+                      {material.content.category || 'Uncategorized'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {material.content.text || 'No description available'}
+                  </p>
+                  
+                  {material.content.mediaFiles?.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-2">Files:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {material.content.mediaFiles.map((file, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {file.split('/').pop()?.split('?')[0] || 'File'}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = `/materials/${material.materialId}`}
+                  >
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    View
+                  </Button>
+                  {(user?.role === 'Admin' || user?.role === 'Tutor') && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.href = `/admin/materials/${material.materialId}/edit`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => openDeleteDialog(material.materialId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Material</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this material? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => materialToDelete && handleDelete(materialToDelete)}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

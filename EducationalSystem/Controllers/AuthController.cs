@@ -19,127 +19,201 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("registration-form")]
+    [HttpPost("register/user")]
     [AllowAnonymous]
-    public IActionResult GetRegistrationForm()
-    {
-        return Ok(new
-        {
-            Fields = new[] { "Email", "Password", "Name" },
-            Requirements = "Password must be at least 8 characters long"
-        });
-    }
-
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public IActionResult Register([FromBody] RegisterRequest request)
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserRequest request)
     {
         try
         {
-            var user = _authService.SaveUser(request.Email, request.Password, request.Name);
+            var (user, token) = await _authService.RegisterUserAsync(
+                request.Email, request.Password, request.Name);
+
+            if (user == null)
+                return BadRequest(new { Error = "Email already exists" });
+
             return Ok(new
             {
                 Message = "User registered successfully",
-                UserId = user.UserId,
-                Email = user.Email,
-                Name = user.Name
+                Token = token,
+                User = new
+                {
+                    user.UserId,
+                    user.Email,
+                    user.Name,
+                    user.UserType
+                }
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Registration failed for {Email}", request.Email);
+            _logger.LogError(ex, "User registration failed");
             return BadRequest(new { Error = ex.Message });
         }
     }
 
-    [HttpGet("login-form")]
+    [HttpPost("register/tutor")]
     [AllowAnonymous]
-    public IActionResult GetLoginForm()
+    public async Task<IActionResult> RegisterTutor([FromBody] RegisterTutorRequest request)
     {
-        return Ok(new
+        try
         {
-            Fields = new[] { "Email", "Password" }
-        });
+            var (user, token) = await _authService.RegisterTutorAsync(
+                request.Email, request.Password, request.Name, request.Experience, request.Specialty);
+
+            if (user == null)
+                return BadRequest(new { Error = "Email already exists" });
+
+            return Ok(new
+            {
+                Message = "Tutor registered successfully",
+                Token = token,
+                User = new
+                {
+                    user.UserId,
+                    user.Email,
+                    user.Name,
+                    user.UserType
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Tutor registration failed");
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("register/admin")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RegisterAdmin([FromBody] RegisterAdminRequest request)
+    {
+        try
+        {
+            var (user, token) = await _authService.RegisterAdminAsync(
+                request.Email, request.Password, request.Name, request.AccessKey);
+
+            if (user == null)
+                return BadRequest(new { Error = "Email already exists" });
+
+            return Ok(new
+            {
+                Message = "Admin registered successfully",
+                Token = token,
+                User = new
+                {
+                    user.UserId,
+                    user.Email,
+                    user.Name,
+                    user.UserType
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Admin registration failed");
+            return BadRequest(new { Error = ex.Message });
+        }
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public IActionResult Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
         {
-            var user = _authService.Login(request.Email, request.Password);
+            var (user, token) = await _authService.LoginAsync(request.Email, request.Password);
 
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Name)
-            };
+            if (user == null)
+                return Unauthorized(new { Error = "Invalid credentials or account blocked" });
 
             return Ok(new
             {
                 Message = "Login successful",
-                UserId = user.UserId,
-                Name = user.Name,
-                Email = user.Email,
-                Status = user.Status.ToString()
+                Token = token,
+                User = new
+                {
+                    user.UserId,
+                    user.Email,
+                    user.Name,
+                    user.UserType,
+                    user.Status
+                }
             });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { Error = ex.Message });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Login failed");
             return BadRequest(new { Error = ex.Message });
         }
     }
 
-    [HttpGet("reset-password-form")]
+    [HttpPost("change-password")]
     [Authorize]
-    public IActionResult GetResetPasswordForm()
-    {
-        return Ok(new
-        {
-            Fields = new[] { "OldPassword", "NewPassword" }
-        });
-    }
-
-    [HttpPost("reset-password")]
-    [Authorize]
-    public IActionResult ResetPassword([FromBody] ResetPasswordRequest request)
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
         try
         {
-            _authService.RefreshPassword(request.OldPassword, request.NewPassword);
-            return Ok(new { Message = "Password reset successfully" });
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            var success = await _authService.ChangePasswordAsync(
+                userId, request.OldPassword, request.NewPassword);
+
+            if (!success)
+                return BadRequest(new { Error = "Failed to change password" });
+
+            return Ok(new { Message = "Password changed successfully" });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Password change failed");
             return BadRequest(new { Error = ex.Message });
         }
     }
 
     [HttpPost("block-user/{userId}")]
     [Authorize(Roles = "Admin")]
-    public IActionResult BlockUser(long userId, [FromQuery] string accessKey)
+    public async Task<IActionResult> BlockUser(long userId)
     {
         try
         {
-            _authService.BlockUser(userId, accessKey);
+            var success = await _authService.BlockUserAsync(userId);
+
+            if (!success)
+                return BadRequest(new { Error = "Failed to block user" });
+
             return Ok(new { Message = $"User {userId} blocked successfully" });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { Error = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { Error = ex.Message });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Block user failed");
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public IActionResult GetCurrentUser()
+    {
+        try
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var email = User.FindFirstValue(ClaimTypes.Email);
+            var name = User.FindFirstValue(ClaimTypes.Name);
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            var statusClaim = User.FindFirst("Status")?.Value ?? "Active";
+
+            return Ok(new
+            {
+                UserId = userId,
+                Email = email,
+                Name = name,
+                UserType = role,
+                Status = statusClaim
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Get current user failed");
             return BadRequest(new { Error = ex.Message });
         }
     }

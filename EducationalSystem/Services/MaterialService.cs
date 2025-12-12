@@ -12,33 +12,33 @@ public class MaterialService : IMaterialService
         _materialsRepository = materialsRepository;
     }
 
-    public Material CreateMaterial(long userId, DateTime creationDate, Content content)
+    public async Task<Material> CreateMaterial(long userId, DateTime creationDate, Content content, ContentCategory category)
     {
-        return _materialsRepository.CreateMaterial(userId, creationDate, content);
+        return await _materialsRepository.CreateMaterial(userId, creationDate, content, category);
     }
 
-    public void DeleteMaterial(long materialId)
+    public async Task DeleteMaterial(long materialId)
     {
-        _materialsRepository.DeleteMaterial(materialId);
+        await _materialsRepository.DeleteMaterial(materialId);
     }
 
-    public List<Material> GetAllMaterials()
+    public async Task<List<Material>> GetAllMaterials()
     {
-        return _materialsRepository.GetAllMaterials();
+        return await _materialsRepository.GetAllMaterials();
     }
 
-    public Material GetMaterialById(long id)
+    public async Task<Material> GetMaterialById(long id)
     {
-        return _materialsRepository.GetMaterialById(id);
+        return await _materialsRepository.GetMaterialById(id);
     }
 
-    public List<Material> GetMaterialsByUserId(long userId)
+    public async Task<List<Material>> GetMaterialsByUserId(long userId)
     {
-        return _materialsRepository.GetMaterialsByUserId(userId);
+        return await _materialsRepository.GetMaterialsByUserId(userId);
     }
 
-    public Material UpdateContent(long materialId, Dictionary<string, object> newData)
+    public async Task<Material> UpdateContent(long materialId, Dictionary<string, object> newData)
     {
-        return _materialsRepository.UpdateContent(materialId, newData);
+        return await _materialsRepository.UpdateContent(materialId, newData);
     }
 }

@@ -4,10 +4,13 @@ namespace EducationalSystem.Repositories;
 
 public interface ITestsRepository
 {
-    public Test CreateTest(long materialId, List<Question> questions);
-    public void DeleteTest(long testId);
-    public Test UpdateQuestions(long testId, List<Question> newQuestions);
-    public Test GetTestByMaterialId(long materialId);
-    public List<Test> GetAllTests();
-    public Test GetTestById(long testId);
+    Task<Test> CreateTest(long materialId, List<Question> questions, long createdByUserId);
+    Task DeleteTest(long testId);
+    Task<Test> GetTestById(long testId);
+    Task<Test> GetTestByMaterialId(long materialId);
+    Task<List<Test>> GetAllTests();
+    Task<Test> UpdateQuestions(long testId, List<Question> newQuestions);
+    Task<TestResult> SaveTestResult(TestResult testResult);
+    Task<List<TestResult>> GetTestResultsByUserId(long userId);
+    Task<List<TestResult>> GetTestResultsByTestId(long testId);
 }

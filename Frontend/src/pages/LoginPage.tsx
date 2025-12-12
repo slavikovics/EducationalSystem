@@ -9,7 +9,8 @@ import {
   BookOpen, 
   Eye, 
   EyeOff,
-  LogIn
+  LogIn,
+  AlertCircle
 } from 'lucide-react';
 
 // Import shadcn/ui components
@@ -28,7 +29,6 @@ import {
   Alert,
   AlertDescription,
 } from '../components/ui/alert';
-import { Separator } from '../components/ui/separator';
 
 // Define validation schema with Zod
 const loginSchema = z.object({
@@ -68,29 +68,10 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(data.email, data.password);
-      navigate('/');
+      // If login succeeds, navigate to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const demoLogin = async (role: 'user' | 'tutor' | 'admin') => {
-    setError('');
-    setIsLoading(true);
-
-    const credentials = {
-      user: { email: 'student@example.com', password: 'Password123!' },
-      tutor: { email: 'tutor@example.com', password: 'TutorPass123!' },
-      admin: { email: 'admin@example.com', password: 'AdminPass123!' },
-    };
-
-    try {
-      await login(credentials[role].email, credentials[role].password);
-      navigate('/');
-    } catch (err: any) {
-      setError('Demo login failed. Please use the form above.');
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +103,7 @@ export const LoginPage: React.FC = () => {
           <CardContent>
             {error && (
               <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -158,7 +140,6 @@ export const LoginPage: React.FC = () => {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
                     {...register('password')}
                     className={errors.password ? "border-destructive pr-10" : "pr-10"}
                     disabled={isLoading}
@@ -204,56 +185,6 @@ export const LoginPage: React.FC = () => {
                 )}
               </Button>
             </form>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <Separator />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            {/* Demo Accounts */}
-            <div className="space-y-3">
-              <p className="text-sm text-center text-muted-foreground mb-2">
-                Try out demo accounts:
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => demoLogin('user')}
-                  disabled={isLoading}
-                  className="text-xs"
-                >
-                  Student
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => demoLogin('tutor')}
-                  disabled={isLoading}
-                  className="text-xs"
-                >
-                  Tutor
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => demoLogin('admin')}
-                  disabled={isLoading}
-                  className="text-xs"
-                >
-                  Admin
-                </Button>
-              </div>
-            </div>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
@@ -266,30 +197,8 @@ export const LoginPage: React.FC = () => {
                 Create account
               </Link>
             </div>
-            
-            <div className="text-xs text-center text-muted-foreground">
-              By continuing, you agree to our{' '}
-              <Link to="/terms" className="underline underline-offset-4">
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link to="/privacy" className="underline underline-offset-4">
-                Privacy Policy
-              </Link>
-            </div>
           </CardFooter>
         </Card>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} EduSystem. All rights reserved.</p>
-          <p className="mt-1">
-            Version 1.0.0 •{' '}
-            <Link to="/status" className="underline underline-offset-4">
-              System Status
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

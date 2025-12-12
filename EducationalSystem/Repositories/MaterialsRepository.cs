@@ -13,28 +13,37 @@ public class MaterialsRepository : IMaterialsRepository
         _context = context;
     }
 
-    public Material CreateMaterial(long userId, DateTime creationDate, Content content)
+    public async Task<Material> CreateMaterial(long userId, DateTime creationDate, Content content, ContentCategory category)
     {
-        var user = _context.Users.Find(userId)
+        var user = await _context.Users.FindAsync(userId)
                    ?? throw new KeyNotFoundException("User not found");
+        
+        _context.Contents.Add(content);
+        await _context.SaveChangesAsync();
 
         var material = new Material
         {
             CreationDate = creationDate,
+            ContentId = content.ContentId,
             Content = content,
-            UserId = userId
+            UserId = userId,
+            Category = category
         };
 
         _context.Materials.Add(material);
-        _context.SaveChanges();
-        return material;
+        await _context.SaveChangesAsync();
+
+        return await _context.Materials
+            .Include(m => m.Content)
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.MaterialId == material.MaterialId);
     }
 
-    public void DeleteMaterial(long materialId)
+    public async Task DeleteMaterial(long materialId)
     {
-        var material = _context.Materials
+        var material = await _context.Materials
                            .Include(m => m.Content)
-                           .FirstOrDefault(m => m.MaterialId == materialId)
+                           .FirstOrDefaultAsync(m => m.MaterialId == materialId)
                        ?? throw new KeyNotFoundException("Material not found");
 
         _context.Materials.Remove(material);
@@ -44,14 +53,14 @@ public class MaterialsRepository : IMaterialsRepository
             _context.Contents.Remove(material.Content);
         }
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public Material UpdateContent(long materialId, Dictionary<string, object> newData)
+    public async Task<Material> UpdateContent(long materialId, Dictionary<string, object> newData)
     {
-        var material = _context.Materials
+        var material = await _context.Materials
                            .Include(m => m.Content)
-                           .FirstOrDefault(m => m.MaterialId == materialId)
+                           .FirstOrDefaultAsync(m => m.MaterialId == materialId)
                        ?? throw new KeyNotFoundException("Material not found");
 
         material.Content ??= new Content
@@ -64,32 +73,32 @@ public class MaterialsRepository : IMaterialsRepository
             material.Content.Text += kvp.Value.ToString();
         }
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return material;
     }
 
-    public List<Material> GetAllMaterials()
+    public async Task<List<Material>> GetAllMaterials()
     {
-        return _context.Materials
+        return await _context.Materials
             .Include(m => m.Content)
             .OrderByDescending(m => m.CreationDate)
-            .ToList();
+            .ToListAsync();
     }
 
-    public Material GetMaterialById(long id)
+    public async Task<Material> GetMaterialById(long id)
     {
-        return _context.Materials
+        return await _context.Materials
                    .Include(m => m.Content)
-                   .FirstOrDefault(m => m.MaterialId == id)
+                   .FirstOrDefaultAsync(m => m.MaterialId == id)
                ?? throw new KeyNotFoundException("Material not found");
     }
 
-    public List<Material> GetMaterialsByUserId(long userId)
+    public async Task<List<Material>> GetMaterialsByUserId(long userId)
     {
-        return _context.Materials
+        return await _context.Materials
             .Include(m => m.Content)
             .Where(m => EF.Property<long>(m, "UserId") == userId)
             .OrderByDescending(m => m.CreationDate)
-            .ToList();
+            .ToListAsync();
     }
 }

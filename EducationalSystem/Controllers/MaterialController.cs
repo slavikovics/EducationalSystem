@@ -22,29 +22,63 @@ public class MaterialController : ControllerBase
     }
 
     [HttpGet("create-form")]
+    [Authorize(Roles = "Admin,Tutor")]
     public IActionResult GetCreateMaterialForm()
     {
         return Ok(new
         {
-            Fields = new[] { "Text", "MediaFiles", "Category" },
             Categories = Enum.GetNames(typeof(ContentCategory))
         });
     }
 
-    [HttpPost]
-    public IActionResult CreateMaterial([FromBody] CreateMaterialRequest request)
+    [HttpPost("create-material")]
+    [Authorize(Roles = "Admin, Tutor")]
+    public async Task<IActionResult> CreateMaterial([FromBody] CreateMaterialRequest request)
     {
         try
         {
-            var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (string.IsNullOrEmpty(request.Category))
+            {
+                return BadRequest(new { Error = "Category is required" });
+            }
+
+            if (!Enum.TryParse<ContentCategory>(request.Category, true, out var category))
+            {
+                var validCategories = Enum.GetNames(typeof(ContentCategory));
+                return BadRequest(new { 
+                    Error = $"Invalid category '{request.Category}'. Valid values are: {string.Join(", ", validCategories)}"
+                });
+            }
+            
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            _logger.LogError($"Creating material for user {userId}");
+
             var content = new Content
             {
                 Text = request.Text,
-                MediaFiles = request.MediaFiles
+                MediaFiles = request.MediaFiles,
             };
 
-            var material = _materialService.CreateMaterial(userId, DateTime.UtcNow, content);
-            return CreatedAtAction(nameof(GetMaterialById), new { id = material.MaterialId }, material);
+            var material = await _materialService.CreateMaterial(userId, DateTime.UtcNow, content, category);
+
+            return Ok(new
+            {
+                Message = "Material created successfully",
+                Material = new
+                {
+                    material.MaterialId,
+                    material.CreationDate,
+                    material.UserId,
+                    Content = material.Content != null
+                        ? new
+                        {
+                            material.Content.Text,
+                            material.Content.MediaFiles,
+                            request.Category
+                        }
+                        : null
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -55,11 +89,11 @@ public class MaterialController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin,Tutor")]
-    public IActionResult DeleteMaterial(long id)
+    public async Task<IActionResult> DeleteMaterial(long id)
     {
         try
         {
-            _materialService.DeleteMaterial(id);
+            await _materialService.DeleteMaterial(id);
             return Ok(new { Message = $"Material {id} deleted successfully" });
         }
         catch (KeyNotFoundException ex)
@@ -73,11 +107,20 @@ public class MaterialController : ControllerBase
     }
 
     [HttpGet("{id}/edit-form")]
-    public IActionResult GetEditContentForm(long id)
+    public async Task<IActionResult> GetEditContentForm(long id)
     {
         try
         {
-            var material = _materialService.GetMaterialById(id);
+            var material = await _materialService.GetMaterialById(id);
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            if (material.UserId != userId &&
+                !User.IsInRole("Admin") &&
+                !User.IsInRole("Tutor"))
+            {
+                return Forbid();
+            }
+
             return Ok(new
             {
                 Material = material,
@@ -91,19 +134,21 @@ public class MaterialController : ControllerBase
     }
 
     [HttpPut("{id}/content")]
-    public IActionResult UpdateContent(long id, [FromBody] Dictionary<string, object> newData)
+    public async Task<IActionResult> UpdateContent(long id, [FromBody] Dictionary<string, object> newData)
     {
         try
         {
-            var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var material = _materialService.GetMaterialById(id);
+            var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var material = await _materialService.GetMaterialById(id);
 
-            if (material.UserId != userId && !User.IsInRole("Admin"))
+            if (material.UserId != userId &&
+                !User.IsInRole("Admin") &&
+                !User.IsInRole("Tutor"))
             {
                 return Forbid();
             }
 
-            var updatedMaterial = _materialService.UpdateContent(id, newData);
+            var updatedMaterial = await _materialService.UpdateContent(id, newData);
             return Ok(updatedMaterial);
         }
         catch (KeyNotFoundException ex)
@@ -118,11 +163,11 @@ public class MaterialController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAllMaterials()
+    public async Task<IActionResult> GetAllMaterials()
     {
         try
         {
-            var materials = _materialService.GetAllMaterials();
+            var materials = await _materialService.GetAllMaterials();
             return Ok(materials);
         }
         catch (Exception ex)
@@ -134,11 +179,11 @@ public class MaterialController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetMaterialById(long id)
+    public async Task<IActionResult> GetMaterialById(long id)
     {
         try
         {
-            var material = _materialService.GetMaterialById(id);
+            var material = await _materialService.GetMaterialById(id);
             return Ok(material);
         }
         catch (KeyNotFoundException ex)
@@ -148,18 +193,20 @@ public class MaterialController : ControllerBase
     }
 
     [HttpGet("user/{userId}")]
-    [Authorize]
-    public IActionResult GetUserMaterials(long userId)
+    public async Task<IActionResult> GetUserMaterials(long userId)
     {
         try
         {
-            var currentUserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            if (currentUserId != userId && !User.IsInRole("Admin"))
+            var currentUserId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            if (currentUserId != userId &&
+                !User.IsInRole("Admin") &&
+                !User.IsInRole("Tutor"))
             {
                 return Forbid();
             }
 
-            var materials = _materialService.GetMaterialsByUserId(userId);
+            var materials = await _materialService.GetMaterialsByUserId(userId);
             return Ok(materials);
         }
         catch (Exception ex)

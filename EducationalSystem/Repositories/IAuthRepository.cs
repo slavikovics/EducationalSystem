@@ -5,8 +5,10 @@ namespace EducationalSystem.Repositories;
 
 public interface IAuthRepository
 {
-    public User SaveUser(string email, string password, string name);
-    public void RefreshPassword(string oldPassword, string newPassword);
-    public User Login(string email, string password);
-    public void BlockUser(long userId, string accessKey);
+    Task<User> SaveUserAsync(string email, string password, string name);
+    Task RefreshPasswordAsync(long userId, string oldPassword, string newPassword);
+    Task<User> LoginAsync(string email, string password);
+    Task BlockUserAsync(long userId, long adminUserId);
+    Task<bool> IsAdminAsync(long userId);
+    Task<bool> IsTutorAsync(long userId);
 }

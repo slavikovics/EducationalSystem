@@ -13,9 +13,9 @@ public class ReviewsRepository : IReviewsRepository
         _context = context;
     }
 
-    public Review CreateReview(long userId, ReviewType type, Content content)
+    public async Task<Review> CreateReview(long userId, ReviewType type, Content content)
     {
-        var user = _context.Users.Find(userId)
+        var user = await _context.Users.FindAsync(userId)
                    ?? throw new KeyNotFoundException("User not found");
 
         var review = new Review
@@ -26,19 +26,16 @@ public class ReviewsRepository : IReviewsRepository
         };
 
         _context.Reviews.Add(review);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return review;
     }
 
-    public void DeleteReview(long reviewId, string accessKey)
+    public async Task DeleteReview(long reviewId)
     {
-        var admin = _context.Admins.FirstOrDefault(a => a.AccessKey == accessKey)
-                    ?? throw new UnauthorizedAccessException("Invalid access key");
-
-        var review = _context.Reviews
-                         .Include(r => r.Content)
-                         .FirstOrDefault(r => r.ReviewId == reviewId)
-                     ?? throw new KeyNotFoundException("Review not found");
+        var review = await _context.Reviews
+            .Include(r => r.Content)
+            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+            ?? throw new KeyNotFoundException("Review not found");
 
         _context.Reviews.Remove(review);
 
@@ -47,31 +44,31 @@ public class ReviewsRepository : IReviewsRepository
             _context.Contents.Remove(review.Content);
         }
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public List<Review> GetAllReviews()
+    public async Task<List<Review>> GetAllReviews()
     {
-        return _context.Reviews
+        return await _context.Reviews
             .Include(r => r.Content)
             .OrderByDescending(r => r.ReviewId)
-            .ToList();
+            .ToListAsync();
     }
 
-    public Review GetReviewById(long reviewId)
+    public async Task<Review> GetReviewById(long reviewId)
     {
-        return _context.Reviews
-                   .Include(r => r.Content)
-                   .FirstOrDefault(r => r.ReviewId == reviewId)
-               ?? throw new KeyNotFoundException("Review not found");
+        return await _context.Reviews
+            .Include(r => r.Content)
+            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+            ?? throw new KeyNotFoundException("Review not found");
     }
 
-    public Review UpdateContent(long reviewId, Dictionary<string, object> newData)
+    public async Task<Review> UpdateContent(long reviewId, Dictionary<string, object> newData)
     {
-        var review = _context.Reviews
-                         .Include(r => r.Content)
-                         .FirstOrDefault(r => r.ReviewId == reviewId)
-                     ?? throw new KeyNotFoundException("Review not found");
+        var review = await _context.Reviews
+            .Include(r => r.Content)
+            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+            ?? throw new KeyNotFoundException("Review not found");
 
         if (review.Content == null)
             throw new InvalidOperationException("Review has no content to update");
@@ -90,7 +87,7 @@ public class ReviewsRepository : IReviewsRepository
             }
         }
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return review;
     }
 }

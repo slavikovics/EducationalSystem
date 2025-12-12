@@ -12,33 +12,66 @@ public class TestService : ITestService
         _testsRepository = testsRepository;
     }
 
-    public Test CreateTest(long materialId, List<Question> questions)
+    public async Task<Test> CreateTest(long materialId, List<Question> questions, long createdByUserId)
     {
-        return _testsRepository.CreateTest(materialId, questions);
+        return await _testsRepository.CreateTest(materialId, questions, createdByUserId);
     }
 
-    public void DeleteTest(long testId)
+    public async Task DeleteTest(long testId)
     {
-        _testsRepository.DeleteTest(testId);
+        await _testsRepository.DeleteTest(testId);
     }
 
-    public List<Test> GetAllTests()
+    public async Task<List<Test>> GetAllTests()
     {
-        return _testsRepository.GetAllTests();
+        return await _testsRepository.GetAllTests();
     }
 
-    public Test GetTestById(long testId)
+    public async Task<Test> GetTestById(long testId)
     {
-        return _testsRepository.GetTestById(testId);
+        return await _testsRepository.GetTestById(testId);
     }
 
-    public Test GetTestByMaterialId(long materialId)
+    public async Task<Test> GetTestByMaterialId(long materialId)
     {
-        return _testsRepository.GetTestByMaterialId(materialId);
+        return await _testsRepository.GetTestByMaterialId(materialId);
     }
 
-    public Test UpdateQuestions(long testId, List<Question> newQuestions)
+    public async Task<Test> UpdateQuestions(long testId, List<Question> newQuestions)
     {
-        return _testsRepository.UpdateQuestions(testId, newQuestions);
+        return await _testsRepository.UpdateQuestions(testId, newQuestions);
+    }
+
+    public async Task<TestResult> SubmitTest(long testId, long userId, Dictionary<int, string> answers)
+    {
+        var test = await _testsRepository.GetTestById(testId);
+        
+        int score = 0;
+        foreach (var (questionIndex, userAnswer) in answers)
+        {
+            if (questionIndex >= 0 && questionIndex < test.Questions.Count)
+            {
+                var question = test.Questions[questionIndex];
+                if (question.AnswerText.Equals(userAnswer, StringComparison.OrdinalIgnoreCase))
+                {
+                    score++;
+                }
+            }
+        }
+
+        var testResult = new TestResult
+        {
+            TestId = testId,
+            UserId = userId,
+            Score = score,
+            TotalQuestions = test.Questions.Count,
+            PassingScore = test.PassingScore,
+            Passed = score >= test.PassingScore,
+            UserAnswers = answers,
+            SubmittedAt = DateTime.UtcNow
+        };
+
+        // Save the test result
+        return await _testsRepository.SaveTestResult(testResult);
     }
 }
