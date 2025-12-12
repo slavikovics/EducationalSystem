@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using EducationalSystem.DTOs;
 using EducationalSystem.Models;
 using EducationalSystem.Services;
@@ -73,13 +74,14 @@ public class ReviewController : ControllerBase
         }
     }
 
-    [HttpGet]
+    [HttpGet("all")]
     [AllowAnonymous]
     public async Task<IActionResult> GetAllReviews()
     {
         try
         {
             var reviews = await _reviewService.GetAllReviews();
+            _logger.LogInformation($"Returning {JsonSerializer.Serialize(reviews)} reviews");
             return Ok(reviews);
         }
         catch (Exception ex)

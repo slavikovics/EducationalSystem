@@ -319,7 +319,7 @@ export const testsAPI = {
 export const reviewsAPI = {
   getAll: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/reviews');
+      const response = await api.get('/review/all');
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -328,7 +328,7 @@ export const reviewsAPI = {
   
   getById: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/reviews/${id}`);
+      const response = await api.get(`/review/${id}`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -337,7 +337,7 @@ export const reviewsAPI = {
   
   create: async (data: CreateReviewFormData): Promise<ApiResponse> => {
     try {
-      const response = await api.post('/reviews', data);
+      const response = await api.post('/review', data);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -346,7 +346,7 @@ export const reviewsAPI = {
   
   update: async (id: number, newData: Record<string, any>): Promise<ApiResponse> => {
     try {
-      const response = await api.put(`/reviews/${id}/content`, newData);
+      const response = await api.put(`/review/${id}/content`, newData);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -355,7 +355,7 @@ export const reviewsAPI = {
   
   delete: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.delete(`/reviews/${id}`);
+      const response = await api.delete(`/review/${id}`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -364,7 +364,7 @@ export const reviewsAPI = {
   
   getCreateForm: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/reviews/create-form');
+      const response = await api.get('/review/create-form');
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -373,7 +373,7 @@ export const reviewsAPI = {
   
   getEditForm: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/reviews/${id}/edit-form`);
+      const response = await api.get(`/review/${id}/edit-form`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
