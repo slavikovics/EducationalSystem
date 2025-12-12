@@ -25,7 +25,6 @@ var secretKey = jwtSettings["Secret"] ?? "YourSuperSecretKeyForJWT12345";
 builder.Services.AddDbContext<EducationalSystemDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    Console.WriteLine($"Using connection string: {connectionString}");
     options.UseNpgsql(connectionString);
 
     // For development logging
@@ -87,16 +86,17 @@ var app = builder.Build();
 // Apply database migrations with error handling
 using (var scope = app.Services.CreateScope())
 {
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var dbContext = scope.ServiceProvider.GetRequiredService<EducationalSystemDbContext>();
 
     try
     {
-        Console.WriteLine("Checking database connection...");
+        logger.LogInformation("Checking database connection...");
 
         // First check if we can connect
         if (await dbContext.Database.CanConnectAsync())
         {
-            Console.WriteLine("Database connection successful");
+            logger.LogInformation("Database connection successful");
 
             // Check if migrations table exists
             var migrationTableExists = await dbContext.Database.ExecuteSqlRawAsync(@"
@@ -108,50 +108,50 @@ using (var scope = app.Services.CreateScope())
 
             if (!migrationTableExists)
             {
-                Console.WriteLine("Migrations table doesn't exist. Creating database from scratch...");
+                logger.LogInformation("Migrations table doesn't exist. Creating database from scratch...");
                 await dbContext.Database.EnsureDeletedAsync();
                 await dbContext.Database.EnsureCreatedAsync();
-                Console.WriteLine("Database created successfully");
+                logger.LogInformation("Database created successfully");
             }
             else
             {
-                Console.WriteLine("Applying pending migrations...");
+                logger.LogInformation("Applying pending migrations...");
                 var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
                 if (pendingMigrations.Any())
                 {
-                    Console.WriteLine($"Found {pendingMigrations.Count()} pending migration(s):");
+                    logger.LogInformation($"Found {pendingMigrations.Count()} pending migration(s):");
                     foreach (var migration in pendingMigrations)
                     {
-                        Console.WriteLine($"  - {migration}");
+                        logger.LogInformation($"  - {migration}");
                     }
 
                     await dbContext.Database.MigrateAsync();
-                    Console.WriteLine("Migrations applied successfully");
+                    logger.LogInformation("Migrations applied successfully");
                 }
                 else
                 {
-                    Console.WriteLine("No pending migrations");
+                    logger.LogInformation("No pending migrations");
                 }
             }
         }
         else
         {
-            Console.WriteLine("Cannot connect to database. Ensure PostgreSQL is running.");
+            logger.LogInformation("Cannot connect to database. Ensure PostgreSQL is running.");
             // For development, create database if it doesn't exist
-            Console.WriteLine("Attempting to create database...");
+            logger.LogInformation("Attempting to create database...");
             await dbContext.Database.EnsureCreatedAsync();
-            Console.WriteLine("Database created (if it didn't exist)");
+            logger.LogInformation("Database created (if it didn't exist)");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error during database setup: {ex.Message}");
-        Console.WriteLine($"Full error: {ex}");
+        logger.LogInformation($"Error during database setup: {ex.Message}");
+        logger.LogInformation($"Full error: {ex}");
 
         // For development, try to continue anyway
         if (builder.Environment.IsDevelopment())
         {
-            Console.WriteLine("Continuing in development mode despite database error");
+            logger.LogInformation("Continuing in development mode despite database error");
         }
         else
         {

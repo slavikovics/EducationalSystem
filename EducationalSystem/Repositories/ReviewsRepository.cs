@@ -13,7 +13,7 @@ public class ReviewsRepository : IReviewsRepository
         _context = context;
     }
 
-    public async Task<Review> CreateReview(long userId, ReviewType type, Content content)
+    public async Task<Review> CreateReview(long userId, ReviewType type, Content content, int? rating)
     {
         var user = await _context.Users.FindAsync(userId)
                    ?? throw new KeyNotFoundException("User not found");
@@ -22,7 +22,8 @@ public class ReviewsRepository : IReviewsRepository
         {
             UserId = userId,
             Type = type,
-            Content = content
+            Content = content,
+            Rating = rating
         };
 
         _context.Reviews.Add(review);
@@ -33,9 +34,9 @@ public class ReviewsRepository : IReviewsRepository
     public async Task DeleteReview(long reviewId)
     {
         var review = await _context.Reviews
-            .Include(r => r.Content)
-            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
-            ?? throw new KeyNotFoundException("Review not found");
+                         .Include(r => r.Content)
+                         .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+                     ?? throw new KeyNotFoundException("Review not found");
 
         _context.Reviews.Remove(review);
 
@@ -49,26 +50,28 @@ public class ReviewsRepository : IReviewsRepository
 
     public async Task<List<Review>> GetAllReviews()
     {
-        return await _context.Reviews
+        var reviews = await _context.Reviews
             .Include(r => r.Content)
             .OrderByDescending(r => r.ReviewId)
             .ToListAsync();
+        
+        return reviews;
     }
 
     public async Task<Review> GetReviewById(long reviewId)
     {
         return await _context.Reviews
-            .Include(r => r.Content)
-            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
-            ?? throw new KeyNotFoundException("Review not found");
+                   .Include(r => r.Content)
+                   .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+               ?? throw new KeyNotFoundException("Review not found");
     }
 
     public async Task<Review> UpdateContent(long reviewId, Dictionary<string, object> newData)
     {
         var review = await _context.Reviews
-            .Include(r => r.Content)
-            .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
-            ?? throw new KeyNotFoundException("Review not found");
+                         .Include(r => r.Content)
+                         .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+                     ?? throw new KeyNotFoundException("Review not found");
 
         if (review.Content == null)
             throw new InvalidOperationException("Review has no content to update");

@@ -320,6 +320,7 @@ export const reviewsAPI = {
   getAll: async (): Promise<ApiResponse> => {
     try {
       const response = await api.get('/review/all');
+      console.log(response);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -337,7 +338,8 @@ export const reviewsAPI = {
   
   create: async (data: CreateReviewFormData): Promise<ApiResponse> => {
     try {
-      const response = await api.post('/review', data);
+      console.log(data);
+      const response = await api.post('/review/create', data);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));

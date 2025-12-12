@@ -11,6 +11,7 @@ public class Review
     public ReviewType Type { get; set; }
     
     public long? ContentId { get; set; }
+    public int? Rating { get; set; }
     
     public virtual Content? Content { get; set; }
     

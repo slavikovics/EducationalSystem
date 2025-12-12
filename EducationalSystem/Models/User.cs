@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace EducationalSystem.Models;
 
@@ -22,6 +23,8 @@ public class User
     public string UserType { get; set; } = "User";
     
     public virtual ICollection<Material>? Materials { get; set; }
+    
+    [JsonIgnore]
     public virtual ICollection<Review>? Reviews { get; set; }
     public virtual ICollection<TestResult>? TestResults { get; set; }
 }

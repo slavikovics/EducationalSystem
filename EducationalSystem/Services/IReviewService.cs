@@ -4,7 +4,7 @@ namespace EducationalSystem.Services;
 
 public interface IReviewService
 {
-    Task<Review> CreateReview(long userId, ReviewType type, Content content);
+    Task<Review> CreateReview(long userId, ReviewType type, Content content, int? rating);
     Task DeleteReview(long id);
     Task<Review> GetReviewById(long id);
     Task<Review> UpdateContent(long id, Dictionary<string, object> newData);

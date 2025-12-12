@@ -1,8 +1,8 @@
 // src/pages/ReviewsPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { reviewsAPI } from '../services/api'; // You'll need to create this API service
+import { reviewsAPI } from '../services/api';
 import { 
   Star, 
   Search, 
@@ -21,7 +21,9 @@ import {
   Loader2,
   Plus,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  X,
+  Upload
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -63,6 +65,8 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Skeleton } from '../components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
+import { Textarea } from '../components/ui/textarea';
+import { Separator } from '../components/ui/separator';
 
 // Types based on your backend model
 interface User {
@@ -86,6 +90,15 @@ export interface Review {
   userId: number;
   user?: User;
   createdAt: string;
+  rating?: number; // Add rating field for star reviews
+}
+
+// Create review form data type
+interface CreateReviewData {
+  type: 'Star' | 'Text';
+  text: string;
+  rating?: number;
+  mediaFiles?: string[];
 }
 
 export const ReviewsPage: React.FC = () => {
@@ -99,8 +112,17 @@ export const ReviewsPage: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Form state
+  const [reviewType, setReviewType] = useState<'Star' | 'Text'>('Text');
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [mediaFiles, setMediaFiles] = useState<string[]>([]);
+  const [newMediaUrl, setNewMediaUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch reviews from backend - FIXED: Proper API call
+  // Fetch reviews from backend
   const { 
     data: reviews = [], 
     isLoading, 
@@ -110,8 +132,7 @@ export const ReviewsPage: React.FC = () => {
     queryKey: ['reviews'],
     queryFn: async () => {
       try {
-        // Call the API service properly
-        const response = await reviewsAPI.getAllReviews().data;
+        const response = await reviewsAPI.getAll();
         
         // Handle different response formats
         if (response && Array.isArray(response)) {
@@ -132,10 +153,10 @@ export const ReviewsPage: React.FC = () => {
     retry: 2,
   });
 
-  // Delete mutation - FIXED: Use proper API service
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (reviewId: number) => {
-      return await reviewsAPI.deleteReview(reviewId);
+      return await reviewsAPI.delete(reviewId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
@@ -145,6 +166,28 @@ export const ReviewsPage: React.FC = () => {
     },
     onError: (error: Error) => {
       toast.error(`Failed to delete review: ${error.message}`);
+    },
+  });
+
+  // Create/Update mutation
+  const createUpdateMutation = useMutation({
+    mutationFn: async (data: { reviewId?: number; data: CreateReviewData }) => {
+      if (data.reviewId) {
+        // Update existing review
+        return await reviewsAPI.update(data.reviewId, data.data);
+      } else {
+        // Create new review
+        return await reviewsAPI.create(data.data);
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      toast.success(variables.reviewId ? 'Review updated successfully' : 'Review created successfully');
+      resetForm();
+      setCreateDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to ${selectedReview ? 'update' : 'create'} review: ${error.message}`);
     },
   });
 
@@ -173,6 +216,91 @@ export const ReviewsPage: React.FC = () => {
   const totalReviews = reviews.length;
   const starReviews = reviews.filter((r: Review) => r.type === 'Star').length;
   const textReviews = reviews.filter((r: Review) => r.type === 'Text').length;
+
+  // Initialize form when creating/editing
+  useEffect(() => {
+    if (createDialogOpen) {
+      if (selectedReview) {
+        // Edit mode
+        setReviewType(selectedReview.type);
+        setReviewText(selectedReview.content?.text || '');
+        setRating(selectedReview.rating || 5);
+        setMediaFiles(selectedReview.content?.mediaFiles || []);
+      } else {
+        // Create mode
+        setReviewType('Text');
+        setReviewText('');
+        setRating(5);
+        setMediaFiles([]);
+        setNewMediaUrl('');
+      }
+    }
+  }, [createDialogOpen, selectedReview]);
+
+  const resetForm = () => {
+    setReviewType('Text');
+    setReviewText('');
+    setRating(5);
+    setMediaFiles([]);
+    setNewMediaUrl('');
+    setSelectedReview(null);
+    setIsSubmitting(false);
+  };
+
+  const handleSubmitReview = () => {
+    if (!reviewText.trim()) {
+      toast.error('Please enter your review text');
+      return;
+    }
+
+    if (reviewType === 'Star' && (rating < 1 || rating > 5)) {
+      toast.error('Please select a rating between 1 and 5 stars');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const reviewData: CreateReviewData = {
+      type: reviewType,
+      text: reviewText.trim(),
+      mediaFiles: mediaFiles.length > 0 ? mediaFiles : undefined,
+    };
+
+    if (reviewType === 'Star') {
+      reviewData.rating = rating;
+    }
+
+    createUpdateMutation.mutate({
+      reviewId: selectedReview?.reviewId,
+      data: reviewData
+    });
+  };
+
+  const handleAddMediaUrl = () => {
+    if (!newMediaUrl.trim()) {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+
+    try {
+      new URL(newMediaUrl); // Validate URL
+      if (!mediaFiles.includes(newMediaUrl)) {
+        setMediaFiles([...mediaFiles, newMediaUrl]);
+        setNewMediaUrl('');
+        toast.success('Media URL added');
+      } else {
+        toast.error('This URL is already added');
+      }
+    } catch {
+      toast.error('Please enter a valid URL');
+    }
+  };
+
+  const handleRemoveMediaUrl = (index: number) => {
+    const newMediaFiles = [...mediaFiles];
+    newMediaFiles.splice(index, 1);
+    setMediaFiles(newMediaFiles);
+  };
 
   const getReviewTypeIcon = (type: string) => {
     switch (type) {
@@ -216,10 +344,10 @@ export const ReviewsPage: React.FC = () => {
 
   const getFileIcon = (url: string) => {
     const urlLower = url.toLowerCase();
-    if (urlLower.includes('.jpg') || urlLower.includes('.png') || urlLower.includes('.gif')) {
+    if (urlLower.includes('.jpg') || urlLower.includes('.png') || urlLower.includes('.gif') || urlLower.includes('.jpeg') || urlLower.includes('.webp')) {
       return <ImageIcon className="h-4 w-4" />;
     }
-    if (urlLower.includes('.mp4') || urlLower.includes('.mov') || urlLower.includes('.avi')) {
+    if (urlLower.includes('.mp4') || urlLower.includes('.mov') || urlLower.includes('.avi') || urlLower.includes('.mkv')) {
       return <Video className="h-4 w-4" />;
     }
     if (urlLower.includes('.pdf')) {
@@ -252,6 +380,21 @@ export const ReviewsPage: React.FC = () => {
   const handleCreateReview = () => {
     setSelectedReview(null);
     setCreateDialogOpen(true);
+  };
+
+  const renderStars = (review: Review) => {
+    const reviewRating = review.rating || 0;
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${star <= reviewRating ? 'text-yellow-500 fill-current' : 'text-muted-foreground'}`}
+          />
+        ))}
+        <span className="ml-1 text-sm text-muted-foreground">({reviewRating}/5)</span>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -553,6 +696,12 @@ export const ReviewsPage: React.FC = () => {
               
               <CardContent className="pb-3">
                 <div className="space-y-4">
+                  {review.type === 'Star' && (
+                    <div className="flex items-center gap-2">
+                      {renderStars(review)}
+                    </div>
+                  )}
+                  
                   <p className="text-foreground line-clamp-3">
                     {review.content?.text || 'No review text provided'}
                   </p>
@@ -581,17 +730,11 @@ export const ReviewsPage: React.FC = () => {
               <CardFooter className="pt-3 border-t">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
-                    {review.type === 'Star' && (
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${star <= 4 ? 'text-yellow-500 fill-current' : 'text-muted-foreground'}`}
-                          />
-                        ))}
+                    {review.type === 'Star' ? (
+                      <div className="text-sm text-muted-foreground">
+                        Rated {review.rating || 0} out of 5
                       </div>
-                    )}
-                    {review.type === 'Text' && (
+                    ) : (
                       <Button variant="ghost" size="sm" className="h-8">
                         <ThumbsUp className="h-4 w-4 mr-1" />
                         Helpful
@@ -693,6 +836,15 @@ export const ReviewsPage: React.FC = () => {
                 </div>
               </div>
 
+              {selectedReview.type === 'Star' && (
+                <div className="space-y-3">
+                  <Label>Rating</Label>
+                  <div className="flex items-center gap-2">
+                    {renderStars(selectedReview)}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <Label>Review Content</Label>
                 <div className="p-4 bg-muted/30 rounded-lg whitespace-pre-line">
@@ -718,8 +870,10 @@ export const ReviewsPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <ExternalLink className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={file} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
                         </Button>
                       </div>
                     ))}
@@ -770,8 +924,13 @@ export const ReviewsPage: React.FC = () => {
       </Dialog>
 
       {/* Create/Edit Review Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        setCreateDialogOpen(open);
+        if (!open) {
+          resetForm();
+        }
+      }}>
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle>
               {selectedReview ? 'Edit Review' : 'Write a Review'}
@@ -781,38 +940,171 @@ export const ReviewsPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Review Type</Label>
-              <Select defaultValue={selectedReview?.type || "Text"}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select review type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Text">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Text Review
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="Star">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4" />
-                      Star Rating
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-6 py-4">
+            {/* Review Type Selection */}
+            <div className="space-y-3">
+              <Label htmlFor="review-type">Review Type *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={reviewType === 'Text' ? 'default' : 'outline'}
+                  className="h-auto py-4"
+                  onClick={() => setReviewType('Text')}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    <span>Text Review</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      Write detailed feedback
+                    </span>
+                  </div>
+                </Button>
+                <Button
+                  type="button"
+                  variant={reviewType === 'Star' ? 'default' : 'outline'}
+                  className="h-auto py-4"
+                  onClick={() => setReviewType('Star')}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Star className="h-5 w-5" />
+                    <span>Star Rating</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      Rate with stars
+                    </span>
+                  </div>
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="content">Your Review</Label>
-              <textarea
-                id="content"
-                placeholder="Share your experience, suggestions, or feedback..."
-                className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                defaultValue={selectedReview?.content?.text || ''}
+            {/* Star Rating (only for Star type) */}
+            {reviewType === 'Star' && (
+              <div className="space-y-3">
+                <Label>Rating *</Label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className="p-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
+                      onClick={() => setRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                    >
+                      <Star
+                        className={`h-10 w-10 ${
+                          star <= (hoverRating || rating)
+                            ? 'text-yellow-500 fill-current'
+                            : 'text-muted-foreground'
+                        } transition-colors`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-4 text-lg font-semibold">
+                    {rating} / 5
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Click on a star to rate. 1 is lowest, 5 is highest.
+                </p>
+              </div>
+            )}
+
+            {/* Review Text */}
+            <div className="space-y-3">
+              <Label htmlFor="review-text">
+                Your Review {reviewType === 'Star' ? '(Optional)' : '*'}
+              </Label>
+              <Textarea
+                id="review-text"
+                placeholder={
+                  reviewType === 'Star'
+                    ? "Add comments about your rating (optional)..."
+                    : "Share your detailed experience, suggestions, or feedback..."
+                }
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="min-h-[120px]"
               />
+              {reviewType === 'Text' && !reviewText.trim() && (
+                <p className="text-sm text-destructive">Review text is required</p>
+              )}
+            </div>
+
+            {/* Media URLs */}
+            <div className="space-y-3">
+              <Label>Add Media URLs (Optional)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={newMediaUrl}
+                  onChange={(e) => setNewMediaUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddMediaUrl}
+                  disabled={!newMediaUrl.trim()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Add URLs to images, videos, or documents
+              </p>
+
+              {/* Added Media Files */}
+              {mediaFiles.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Added Media ({mediaFiles.length})</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {mediaFiles.map((url, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 border rounded"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {getFileIcon(url)}
+                          <span className="text-sm truncate">
+                            {extractFileName(url)}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMediaUrl(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* User Info */}
+            <div className="space-y-2">
+              <Label>Reviewing as</Label>
+              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>
+                    {getUserInitials(user?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{user?.name || 'Anonymous'}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {user?.email || 'User'}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -821,13 +1113,26 @@ export const ReviewsPage: React.FC = () => {
               variant="outline"
               onClick={() => {
                 setCreateDialogOpen(false);
-                setSelectedReview(null);
+                resetForm();
               }}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button>
-              {selectedReview ? 'Update Review' : 'Submit Review'}
+            <Button
+              onClick={handleSubmitReview}
+              disabled={isSubmitting || (reviewType === 'Text' && !reviewText.trim())}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {selectedReview ? 'Updating...' : 'Submitting...'}
+                </>
+              ) : (
+                <>
+                  {selectedReview ? 'Update Review' : 'Submit Review'}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

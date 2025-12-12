@@ -4,7 +4,7 @@ namespace EducationalSystem.Repositories;
 
 public interface IReviewsRepository
 {
-    Task<Review> CreateReview(long userId, ReviewType type, Content content);
+    Task<Review> CreateReview(long userId, ReviewType type, Content content, int? rating);
     Task DeleteReview(long reviewId);
     Task<List<Review>> GetAllReviews();
     Task<Review> GetReviewById(long reviewId);

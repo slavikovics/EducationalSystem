@@ -136,14 +136,7 @@ public class EducationalSystemDbContext : DbContext
         modelBuilder.Entity<Review>()
             .Property(r => r.CreatedAt)
             .IsRequired();
-
-        // Review -> User relationship
-        modelBuilder.Entity<Review>()
-            .HasOne(r => r.User)
-            .WithMany(u => u.Reviews)
-            .HasForeignKey(r => r.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
+        
         // Review -> Content relationship
         modelBuilder.Entity<Review>()
             .HasOne(r => r.Content)

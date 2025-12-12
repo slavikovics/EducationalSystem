@@ -12,9 +12,9 @@ public class ReviewService : IReviewService
         _reviewsRepository = reviewsRepository;
     }
 
-    public async Task<Review> CreateReview(long userId, ReviewType type, Content content)
+    public async Task<Review> CreateReview(long userId, ReviewType type, Content content, int? rating)
     {
-        return await _reviewsRepository.CreateReview(userId, type, content);
+        return await _reviewsRepository.CreateReview(userId, type, content, rating);
     }
 
     public async Task DeleteReview(long reviewId)

@@ -33,11 +33,12 @@ public class ReviewController : ControllerBase
         });
     }
 
-    [HttpPost]
+    [HttpPost("create")]
     public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest request)
     {
         try
         {
+            _logger.LogInformation("Creating review");
             var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var content = new Content
             {
@@ -45,8 +46,10 @@ public class ReviewController : ControllerBase
                 MediaFiles = request.MediaFiles
             };
 
-            var review = await _reviewService.CreateReview(userId, request.Type, content);
-            return CreatedAtAction(nameof(GetReviewById), new { id = review.ReviewId }, review);
+            var reviewType = request.Type == "Star" ? ReviewType.Star : ReviewType.Text;
+
+            var review = await _reviewService.CreateReview(userId, reviewType, content, request.Rating);
+            return Ok(review);
         }
         catch (Exception ex)
         {
