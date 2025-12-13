@@ -87,6 +87,7 @@ export const MainLayout: React.FC = () => {
     { name: 'Materials', href: '/materials', icon: BookOpen, roles: ['User', 'Tutor', 'Admin'] },
     { name: 'Tests', href: '/tests', icon: FileText, roles: ['User', 'Tutor', 'Admin'] },
     { name: 'Reviews', href: '/reviews', icon: Star, roles: ['User', 'Tutor', 'Admin'] },
+    { name: 'Test Results', href: '/test-results', icon: ClipboardCheck, roles: ['User', 'Tutor', 'Admin'] }
   ];
 
   const adminNavigation = [
@@ -95,7 +96,7 @@ export const MainLayout: React.FC = () => {
   ];
 
   const tutorNavigation = [
-    { name: 'Test Results', href: '/test-results', icon: ClipboardCheck, roles: ['Tutor', 'Admin'] },
+    { },
   ];
 
   const getNavigation = () => {
@@ -103,7 +104,6 @@ export const MainLayout: React.FC = () => {
     
     return [
       ...mainNavigation.filter(item => item.roles.includes(userRole)),
-      ...(userRole === 'Admin' || userRole === 'Tutor' ? tutorNavigation.filter(item => item.roles.includes(userRole)) : []),
       ...(userRole === 'Admin' ? adminNavigation : []),
     ];
   };

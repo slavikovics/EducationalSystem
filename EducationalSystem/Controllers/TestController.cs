@@ -119,7 +119,6 @@ public class TestController : ControllerBase
             {
                 Score = result.Score,
                 TotalQuestions = result.TotalQuestions,
-                Passed = result.Score >= result.PassingScore
             });
         }
         catch (KeyNotFoundException ex)

@@ -65,8 +65,6 @@ public class TestService : ITestService
             UserId = userId,
             Score = score,
             TotalQuestions = test.Questions.Count,
-            PassingScore = test.PassingScore,
-            Passed = score >= test.PassingScore,
             UserAnswers = answers,
             SubmittedAt = DateTime.UtcNow
         };

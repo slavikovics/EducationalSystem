@@ -223,14 +223,6 @@ public class EducationalSystemDbContext : DbContext
             .IsRequired();
 
         modelBuilder.Entity<TestResult>()
-            .Property(tr => tr.PassingScore)
-            .IsRequired();
-
-        modelBuilder.Entity<TestResult>()
-            .Property(tr => tr.Passed)
-            .IsRequired();
-
-        modelBuilder.Entity<TestResult>()
             .Property(tr => tr.SubmittedAt)
             .IsRequired();
 

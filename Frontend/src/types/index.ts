@@ -116,19 +116,37 @@ export interface Review {
   updatedAt?: string;
 }
 
-// Test Result Types
+// types/index.ts (add these interfaces)
 export interface TestResult {
-  testResultId?: number;
+  testResultId: number;
   testId: number;
   userId: number;
   score: number;
   totalQuestions: number;
-  passingScore: number;
-  passed: boolean;
-  submittedAt?: string;
+  submittedAt: string;
   userAnswers: Record<number, string>;
   test?: Test;
-  user?: User;
+  user?: {
+    userId: number;
+    name: string;
+    email: string;
+  };
+}
+
+export interface TestResultResponse {
+  testResultId: number;
+  testId: number;
+  userId: number;
+  score: number;
+  totalQuestions: number;
+  submittedAt: string;
+  userAnswers: Record<number, string>;
+  test?: Test;
+  user?: {
+    userId: number;
+    name: string;
+    email: string;
+  };
 }
 
 // Auth Responses

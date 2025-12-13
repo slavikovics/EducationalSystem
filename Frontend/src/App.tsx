@@ -17,6 +17,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { ViewMaterialPage } from './pages/ViewMaterialPage';
 import { CreateMaterialPage } from './pages/CreateMaterialPage';
 import { EditMaterialContentPage } from './pages/UpdateContentPage';
+import { TestResultPage } from './pages/TestResultsPage';
 
 // Configure QueryClient with default options
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ function App() {
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="materials" element={<MaterialsPage />} />
                 <Route path="tests" element={<TestsPage />} />
+                <Route path="test-results" element={<TestResultPage />}/>
                 <Route path="reviews" element={<ReviewsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 

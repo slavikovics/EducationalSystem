@@ -313,6 +313,58 @@ export const testsAPI = {
       return Promise.reject(normalizeResponse(error));
     }
   },
+
+    getResults: async (): Promise<ApiResponse<TestResult[]>> => {
+    try {
+      const response = await api.get('/testresult');
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Failed to load test results',
+        data: []
+      };
+    }
+  },
+  
+  getResultById: async (id: number): Promise<ApiResponse<TestResult>> => {
+    try {
+      const response = await api.get(`/testresult/${id}`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Failed to load test result',
+        data: null
+      };
+    }
+  },
+  
+  getUserResults: async (userId: number): Promise<ApiResponse<TestResult[]>> => {
+    try {
+      const response = await api.get(`/testresult/user/${userId}`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Failed to load user test results',
+        data: []
+      };
+    }
+  },
+  
+  getTestResults: async (testId: number): Promise<ApiResponse<TestResult[]>> => {
+    try {
+      const response = await api.get(`/testresult/test/${testId}`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Failed to load test results',
+        data: []
+      };
+    }
+  }
 };
 
 // Reviews API
