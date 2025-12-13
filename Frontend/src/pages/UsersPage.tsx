@@ -1,8 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User as UserIcon, Search, Filter, Mail, Phone, Shield, CheckCircle, XCircle, MoreVertical, Edit, Trash2, Ban, UserCheck } from 'lucide-react';
+import { 
+  User as UserIcon, 
+  Search, 
+  Filter, 
+  Mail, 
+  Phone, 
+  Shield, 
+  CheckCircle, 
+  XCircle, 
+  MoreVertical, 
+  Edit, 
+  Trash2, 
+  Ban, 
+  UserCheck,
+  Sparkles,
+  TrendingUp,
+  Zap,
+  Award,
+  Clock,
+  Eye,
+  Plus,
+  RefreshCw,
+  ChevronRight,
+  Loader2,
+  Activity
+} from 'lucide-react';
 import { format } from 'date-fns';
 import type { User } from '../types';
+
+// Import shadcn/ui components
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
 const mockUsers: User[] = [
   {
@@ -43,11 +128,23 @@ export const UsersPage: React.FC = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [animateHeader, setAnimateHeader] = useState(false);
+  const [animateStats, setAnimateStats] = useState(false);
+  const [animateTable, setAnimateTable] = useState(false);
+  const [hoveredUser, setHoveredUser] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    // Stagger animations
+    setTimeout(() => setAnimateHeader(true), 200);
+    setTimeout(() => setAnimateStats(true), 400);
+    setTimeout(() => setAnimateTable(true), 600);
+  }, []);
+
   // Fetch users (replace with actual API)
-  const { data: users = mockUsers, isLoading } = useQuery({
+  const { data: users = mockUsers, isLoading, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       // Replace with: return api.get('/users').then(res => res.data);
@@ -60,7 +157,8 @@ export const UsersPage: React.FC = () => {
                          user.email.toLowerCase().includes(search.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesTab = activeTab === 'all' || user.role === activeTab || user.status === activeTab;
+    return matchesSearch && matchesRole && matchesStatus && matchesTab;
   });
 
   const blockUser = useMutation({
@@ -71,6 +169,16 @@ export const UsersPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowBlockModal(false);
+      toast.success('User blocked successfully', {
+        icon: <Ban className="h-5 w-5 text-yellow-500" />,
+        duration: 2000,
+      });
+    },
+    onError: () => {
+      toast.error('Failed to block user', {
+        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        duration: 3000,
+      });
     },
   });
 
@@ -82,480 +190,659 @@ export const UsersPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowDeleteModal(false);
+      toast.success('User deleted successfully', {
+        icon: <Trash2 className="h-5 w-5 text-red-500" />,
+        duration: 2000,
+      });
+    },
+    onError: () => {
+      toast.error('Failed to delete user', {
+        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        duration: 3000,
+      });
     },
   });
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'Admin': return 'bg-purple-100 text-purple-800';
-      case 'Tutor': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Admin': return 'bg-gradient-to-br from-purple-100 to-purple-50 text-purple-800 border-purple-200';
+      case 'Tutor': return 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 border-blue-200';
+      default: return 'bg-gradient-to-br from-gray-100 to-gray-50 text-gray-800 border-gray-200';
     }
   };
 
   const getStatusColor = (status: string) => {
     return status === 'Active' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
+      ? 'bg-gradient-to-br from-green-100 to-green-50 text-green-800 border-green-200' 
+      : 'bg-gradient-to-br from-red-100 to-red-50 text-red-800 border-red-200';
+  };
+
+  const getStatusIcon = (status: string) => {
+    return status === 'Active' 
+      ? <CheckCircle className="h-4 w-4 text-green-500 animate-pulse-slow" /> 
+      : <XCircle className="h-4 w-4 text-red-500" />;
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'Admin': return <Shield className="h-4 w-4" />;
+      case 'Tutor': return <Award className="h-4 w-4" />;
+      default: return <UserIcon className="h-4 w-4" />;
+    }
+  };
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Users list refreshed!', {
+      icon: <RefreshCw className="h-5 w-5 text-primary animate-spin-slow" />,
+      duration: 1500,
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className={`
+        flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4
+        transform transition-all duration-700
+        ${animateHeader ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}
+      `}>
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-secondary/10 animate-pulse-slow">
+              <UserIcon className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight animate-slide-in-right">
+              User Management
+            </h1>
+          </div>
+          <p className="text-muted-foreground animate-fade-in animation-delay-300">
             Manage system users, roles, and permissions
           </p>
         </div>
-        <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <UserIcon className="h-4 w-4 mr-2" />
-          Add User
-        </button>
+        
+        <div className="flex items-center gap-3 animate-fade-in animation-delay-500">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="hover-scale transition-smooth group"
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4 group-hover:rotate-180 transition-transform duration-500" />
+            )}
+            Refresh
+          </Button>
+          <Button className="hover-scale transition-smooth group">
+            <Plus className="mr-2 h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
-              <UserIcon className="h-6 w-6" />
+        <Card className={`
+          transform transition-all duration-700 hover:shadow-xl hover:scale-[1.02] transition-all duration-300
+          group
+          ${animateStats ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}
+        `}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold animate-count-up">{users.length}</div>
+                <p className="text-sm text-muted-foreground">Total Users</p>
+              </div>
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 group-hover:scale-110 transition-transform">
+                <UserIcon className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-semibold text-gray-900">{users.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-green-100 text-green-600">
-              <UserCheck className="h-6 w-6" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Users</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {users.filter(u => u.status === 'Active').length}
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
-              <Shield className="h-6 w-6" />
+        <Card className={`
+          transform transition-all duration-700 hover:shadow-xl hover:scale-[1.02] transition-all duration-300
+          group
+          ${animateStats ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}
+        `}
+        style={{ transitionDelay: '100ms' }}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold animate-count-up animation-delay-200">
+                  {users.filter(u => u.status === 'Active').length}
+                </div>
+                <p className="text-sm text-muted-foreground">Active Users</p>
+              </div>
+              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-green-50 group-hover:scale-110 transition-transform">
+                <UserCheck className="h-5 w-5 text-green-600" />
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Admins</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {users.filter(u => u.role === 'Admin').length}
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
-              <UserIcon className="h-6 w-6" />
+        <Card className={`
+          transform transition-all duration-700 hover:shadow-xl hover:scale-[1.02] transition-all duration-300
+          group
+          ${animateStats ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}
+        `}
+        style={{ transitionDelay: '200ms' }}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold animate-count-up animation-delay-400">
+                  {users.filter(u => u.role === 'Admin').length}
+                </div>
+                <p className="text-sm text-muted-foreground">Admins</p>
+              </div>
+              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 group-hover:scale-110 transition-transform">
+                <Shield className="h-5 w-5 text-purple-600" />
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Tutors</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {users.filter(u => u.role === 'Tutor').length}
-              </p>
+          </CardContent>
+        </Card>
+
+        <Card className={`
+          transform transition-all duration-700 hover:shadow-xl hover:scale-[1.02] transition-all duration-300
+          group
+          ${animateStats ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}
+        `}
+        style={{ transitionDelay: '300ms' }}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold animate-count-up animation-delay-600">
+                  {users.filter(u => u.role === 'Tutor').length}
+                </div>
+                <p className="text-sm text-muted-foreground">Tutors</p>
+              </div>
+              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-100 to-amber-50 group-hover:scale-110 transition-transform">
+                <Award className="h-5 w-5 text-amber-600" />
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users by name or email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+      {/* Filters and Tabs */}
+      <Card className={`
+        transform transition-all duration-700 hover:shadow-xl transition-all duration-300
+        ${animateStats ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+      `}>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-5 w-full">
+                <TabsTrigger value="all" className="hover-scale transition-smooth">
+                  All Users
+                </TabsTrigger>
+                <TabsTrigger value="Active" className="hover-scale transition-smooth">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Active
+                </TabsTrigger>
+                <TabsTrigger value="Admin" className="hover-scale transition-smooth">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admins
+                </TabsTrigger>
+                <TabsTrigger value="Tutor" className="hover-scale transition-smooth">
+                  <Award className="h-4 w-4 mr-2" />
+                  Tutors
+                </TabsTrigger>
+                <TabsTrigger value="User" className="hover-scale transition-smooth">
+                  <UserIcon className="h-4 w-4 mr-2" />
+                  Users
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-md"
+                />
+                {search && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:scale-110 transition-transform"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              
+              <Select
+                value={roleFilter}
+                onValueChange={setRoleFilter}
+              >
+                <SelectTrigger className="hover-scale transition-smooth group">
+                  <SelectValue placeholder="All Roles" />
+                  <Filter className="h-4 w-4 ml-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                </SelectTrigger>
+                <SelectContent className="animate-scale-in">
+                  <SelectItem value="all" className="hover-scale transition-smooth">All Roles</SelectItem>
+                  <SelectItem value="Admin" className="hover-scale transition-smooth">Admin</SelectItem>
+                  <SelectItem value="Tutor" className="hover-scale transition-smooth">Tutor</SelectItem>
+                  <SelectItem value="User" className="hover-scale transition-smooth">User</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
+                <SelectTrigger className="hover-scale transition-smooth group">
+                  <SelectValue placeholder="All Status" />
+                  <Activity className="h-4 w-4 ml-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                </SelectTrigger>
+                <SelectContent className="animate-scale-in">
+                  <SelectItem value="all" className="hover-scale transition-smooth">All Status</SelectItem>
+                  <SelectItem value="Active" className="hover-scale transition-smooth">Active</SelectItem>
+                  <SelectItem value="Blocked" className="hover-scale transition-smooth">Blocked</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          
-          <div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Tutor">Tutor</option>
-              <option value="User">User</option>
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Blocked">Blocked</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center">
-                    <div className="flex justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr key={user.userId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.name.charAt(0)}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+      <Card className={`
+        transform transition-all duration-700 hover:shadow-xl transition-all duration-300
+        ${animateTable ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+      `}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserIcon className="h-5 w-5 text-primary" />
+            System Users
+          </CardTitle>
+          <CardDescription className="animate-fade-in">
+            {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} found • 
+            <span className="ml-2 inline-flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-yellow-500 animate-spin-slow" />
+              Real-time user management
+            </span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="text-center py-12 animate-fade-in">
+              <UserIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No users found</h3>
+              <p className="text-muted-foreground">Try adjusting your search filters</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user, index) => (
+                  <TableRow 
+                    key={user.userId}
+                    className={`
+                      hover:bg-muted/50 transition-all duration-300 group
+                      ${hoveredUser === user.userId ? 'bg-muted/30 scale-[1.01]' : ''}
+                      animate-fade-in
+                    `}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    onMouseEnter={() => setHoveredUser(user.userId!)}
+                    onMouseLeave={() => setHoveredUser(null)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="group-hover:scale-110 transition-transform duration-300">
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground">
+                            {user.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium group-hover:text-primary transition-colors">
                             {user.name}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             ID: #{user.userId}
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role || 'User')}`}>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={`${getRoleColor(user.role || 'User')} flex items-center gap-1 hover:scale-105 transition-transform`}
+                      >
+                        {getRoleIcon(user.role || 'User')}
                         {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {user.status === 'Active' ? (
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-500 mr-2" />
-                        )}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(user.status)}
+                        <Badge 
+                          variant="outline" 
+                          className={`${getStatusColor(user.status)} hover:scale-105 transition-transform`}
+                        >
                           {user.status}
-                        </span>
+                        </Badge>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center text-gray-600">
-                          <Mail className="h-4 w-4 mr-2" />
-                          {user.email}
-                        </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                        <Mail className="h-4 w-4" />
+                        <span className="text-sm">{user.email}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setSelectedUser(user);
                             setShowUserModal(true);
                           }}
-                          className="text-blue-600 hover:text-blue-900 p-1"
+                          className="hover-scale transition-smooth"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            // Edit user logic here
+                          }}
+                          className="hover-scale transition-smooth"
                         >
                           <Edit className="h-4 w-4" />
-                        </button>
+                        </Button>
                         {user.status === 'Active' ? (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               setSelectedUser(user);
                               setShowBlockModal(true);
                             }}
-                            className="text-yellow-600 hover:text-yellow-900 p-1"
+                            className="hover-scale transition-smooth"
                           >
                             <Ban className="h-4 w-4" />
-                          </button>
+                          </Button>
                         ) : (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
-                              setSelectedUser(user);
                               // Unblock user logic here
                             }}
-                            className="text-green-600 hover:text-green-900 p-1"
+                            className="hover-scale transition-smooth"
                           >
                             <UserCheck className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
+                          variant="destructive"
+                          size="sm"
                           onClick={() => {
                             setSelectedUser(user);
                             setShowDeleteModal(true);
                           }}
-                          className="text-red-600 hover:text-red-900 p-1"
+                          className="hover-scale transition-smooth"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* User Details Modal */}
-      {showUserModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  User Details
-                </h3>
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  ×
-                </button>
+      {/* User Details Dialog */}
+      <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+        <DialogContent className="sm:max-w-md animate-scale-in">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserIcon className="h-5 w-5 text-primary" />
+              User Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about {selectedUser?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-muted/50 to-background rounded-lg animate-fade-in">
+                <Avatar className="h-16 w-16 group hover:scale-110 transition-transform">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-2xl text-primary-foreground">
+                    {selectedUser.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="text-xl font-semibold">{selectedUser.name}</h4>
+                  <p className="text-sm text-muted-foreground">ID: #{selectedUser.userId}</p>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Email Address</Label>
+                  <div className="flex items-center gap-2 p-2 border rounded hover:scale-[1.02] transition-transform">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedUser.email}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Account Role</Label>
+                  <Badge 
+                    variant="outline" 
+                    className={`${getRoleColor(selectedUser.role || 'User')} w-full justify-center hover:scale-105 transition-transform`}
+                  >
+                    {getRoleIcon(selectedUser.role || 'User')}
+                    {selectedUser.role}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Account Status</Label>
+                  <Badge 
+                    variant="outline" 
+                    className={`${getStatusColor(selectedUser.status)} w-full justify-center hover:scale-105 transition-transform`}
+                  >
+                    {getStatusIcon(selectedUser.status)}
+                    {selectedUser.status}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Member Since</Label>
+                  <div className="flex items-center gap-2 p-2 border rounded hover:scale-[1.02] transition-transform">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>January 2024</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="animate-fade-in animation-delay-200" />
 
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {selectedUser.name.charAt(0)}
+                <h5 className="font-medium flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  User Statistics
+                </h5>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold text-blue-600 animate-count-up">12</div>
+                    <div className="text-xs text-muted-foreground">Materials</div>
                   </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-gray-900">
-                      {selectedUser.name}
-                    </h4>
-                    <p className="text-gray-600">ID: #{selectedUser.userId}</p>
+                  <div className="text-center p-3 rounded-lg bg-gradient-to-br from-green-50 to-green-100 hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold text-green-600 animate-count-up animation-delay-200">8</div>
+                    <div className="text-xs text-muted-foreground">Tests</div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <p className="text-gray-900">{selectedUser.email}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(selectedUser.role || 'User')}`}>
-                      {selectedUser.role}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedUser.status)}`}>
-                      {selectedUser.status}
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      User Since
-                    </label>
-                    <p className="text-gray-900">January 2024</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h5 className="font-medium text-gray-900 mb-3">User Statistics</h5>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-semibold text-blue-600">12</p>
-                      <p className="text-xs text-gray-600">Materials</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-semibold text-green-600">8</p>
-                      <p className="text-xs text-gray-600">Tests</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-semibold text-yellow-600">5</p>
-                      <p className="text-xs text-gray-600">Reviews</p>
-                    </div>
+                  <div className="text-center p-3 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold text-amber-600 animate-count-up animation-delay-400">5</div>
+                    <div className="text-xs text-muted-foreground">Reviews</div>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Edit User
-                </button>
+          <DialogFooter className="animate-fade-in animation-delay-400">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUserModal(false)}
+              className="hover-scale transition-smooth"
+            >
+              Close
+            </Button>
+            <Button className="hover-scale transition-smooth group">
+              <Edit className="mr-2 h-4 w-4 group-hover:rotate-180 transition-transform duration-500" />
+              Edit User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Block User Alert Dialog */}
+      <AlertDialog open={showBlockModal} onOpenChange={setShowBlockModal}>
+        <AlertDialogContent className="animate-scale-in">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-yellow-600" />
+              Block User
+            </AlertDialogTitle>
+            <AlertDialogDescription className="animate-fade-in">
+              Are you sure you want to block <span className="font-semibold">{selectedUser?.name}</span>? 
+              This will prevent them from accessing the platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4 mb-4 animate-fade-in animation-delay-200">
+            <div className="flex items-start gap-3">
+              <Ban className="h-5 w-5 text-yellow-500 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-yellow-800">Warning</h4>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Blocked users cannot log in or access any resources.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Block User Modal */}
-      {showBlockModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
+          <AlertDialogFooter className="animate-fade-in animation-delay-400">
+            <AlertDialogCancel className="hover-scale transition-smooth">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedUser && blockUser.mutate(selectedUser.userId)}
+              disabled={blockUser.isPending}
+              className="bg-yellow-600 text-yellow-foreground hover:bg-yellow-700 hover-scale transition-smooth"
+            >
+              {blockUser.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Blocking...
+                </>
+              ) : (
+                <>
+                  <Ban className="mr-2 h-4 w-4" />
                   Block User
-                </h3>
-                <button
-                  onClick={() => setShowBlockModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  ×
-                </button>
-              </div>
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-              <div className="mb-6">
-                <p className="text-gray-600">
-                  Are you sure you want to block <span className="font-semibold">{selectedUser.name}</span>? 
-                  This will prevent them from accessing the platform.
+      {/* Delete User Alert Dialog */}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="animate-scale-in">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete User
+            </AlertDialogTitle>
+            <AlertDialogDescription className="animate-fade-in">
+              Are you sure you want to permanently delete <span className="font-semibold">{selectedUser?.name}</span>? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4 mb-4 animate-fade-in animation-delay-200">
+            <div className="flex items-start gap-3">
+              <Trash2 className="h-5 w-5 text-red-500 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-red-800">Danger Zone</h4>
+                <p className="text-sm text-red-700 mt-1">
+                  All user data including materials, tests, and reviews will be permanently deleted.
                 </p>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div className="flex">
-                  <Ban className="h-5 w-5 text-yellow-400" />
-                  <div className="ml-3">
-                    <h4 className="text-sm font-medium text-yellow-800">Warning</h4>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Blocked users cannot log in or access any resources.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowBlockModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => blockUser.mutate(selectedUser.userId)}
-                  disabled={blockUser.isPending}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
-                >
-                  {blockUser.isPending ? 'Blocking...' : 'Block User'}
-                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Delete User Modal */}
-      {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Delete User
-                </h3>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <p className="text-gray-600">
-                  Are you sure you want to permanently delete <span className="font-semibold">{selectedUser.name}</span>? 
-                  This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex">
-                  <Trash2 className="h-5 w-5 text-red-400" />
-                  <div className="ml-3">
-                    <h4 className="text-sm font-medium text-red-800">Danger Zone</h4>
-                    <p className="text-sm text-red-700 mt-1">
-                      All user data including materials, tests, and reviews will be permanently deleted.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => deleteUser.mutate(selectedUser.userId)}
-                  disabled={deleteUser.isPending}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-                >
-                  {deleteUser.isPending ? 'Deleting...' : 'Delete Permanently'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          <AlertDialogFooter className="animate-fade-in animation-delay-400">
+            <AlertDialogCancel className="hover-scale transition-smooth">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedUser && deleteUser.mutate(selectedUser.userId)}
+              disabled={deleteUser.isPending}
+              className="bg-red-600 text-red-foreground hover:bg-red-700 hover-scale transition-smooth"
+            >
+              {deleteUser.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
+
+// Add X icon
+const X: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </svg>
+);

@@ -235,7 +235,7 @@ export const materialsAPI = {
 export const testsAPI = {
   getAll: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/tests');
+      const response = await api.get('/test');
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -244,7 +244,7 @@ export const testsAPI = {
   
   getById: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/tests/${id}`);
+      const response = await api.get(`/test/${id}`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -253,7 +253,7 @@ export const testsAPI = {
   
   getByMaterialId: async (materialId: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/tests/material/${materialId}`);
+      const response = await api.get(`/test/material/${materialId}`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -262,7 +262,7 @@ export const testsAPI = {
   
   create: async (data: CreateTestFormData): Promise<ApiResponse> => {
     try {
-      const response = await api.post('/tests', data);
+      const response = await api.post('/test', data);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -271,7 +271,7 @@ export const testsAPI = {
   
   update: async (id: number, questions: Question[]): Promise<ApiResponse> => {
     try {
-      const response = await api.put(`/tests/${id}/questions`, questions);
+      const response = await api.put(`/test/${id}/questions`, questions);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -280,7 +280,7 @@ export const testsAPI = {
   
   delete: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.delete(`/tests/${id}`);
+      const response = await api.delete(`/test/${id}`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -289,7 +289,7 @@ export const testsAPI = {
   
   submitAnswers: async (testId: number, data: SubmitTestFormData): Promise<ApiResponse> => {
     try {
-      const response = await api.post(`/tests/${testId}/submit`, data);
+      const response = await api.post(`/test/${testId}/submit`, data);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -298,7 +298,7 @@ export const testsAPI = {
   
   getCreateForm: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/tests/create-form');
+      const response = await api.get('/test/create-form');
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));
@@ -307,7 +307,7 @@ export const testsAPI = {
   
   getEditForm: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/tests/${id}/edit-form`);
+      const response = await api.get(`/test/${id}/edit-form`);
       return normalizeResponse(response);
     } catch (error: any) {
       return Promise.reject(normalizeResponse(error));

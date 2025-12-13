@@ -45,7 +45,10 @@ import {
   FileText,
   Image,
   Video,
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,6 +73,8 @@ export const CreateMaterialPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [newFileUrl, setNewFileUrl] = useState('');
+  const [isAddingFile, setIsAddingFile] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   const form = useForm<CreateMaterialFormData>({
     resolver: zodResolver(createMaterialSchema),
@@ -80,28 +85,29 @@ export const CreateMaterialPage: React.FC = () => {
     },
   });
 
-  // Fetch form configuration
-useEffect(() => {
-  const fetchFormConfig = async () => {
-    try {
-      const response = await materialsAPI.getCreateMaterialForm();
-      
-      // Backend returns { "Categories": ["Science", "Art", "Technology", "Business", "Health"] }
-      // So just access response.Categories directly
-      if (response.Categories && Array.isArray(response.Categories)) {
-        setAvailableCategories(response.Categories);
-      } else {
-        // Fallback in case of unexpected response
-        console.warn('Unexpected response format:', response);
+  // Fetch form configuration with animation
+  useEffect(() => {
+    const fetchFormConfig = async () => {
+      try {
+        const response = await materialsAPI.getCreateMaterialForm();
+        
+        if (response.Categories && Array.isArray(response.Categories)) {
+          // Animate categories appearing
+          setAvailableCategories([]);
+          setTimeout(() => {
+            setAvailableCategories(response.Categories);
+          }, 100);
+        } else {
+          console.warn('Unexpected response format:', response);
+          setAvailableCategories(['Science', 'Art', 'Technology', 'Business', 'Health']);
+        }
+      } catch (error) {
+        console.error('Failed to fetch form configuration:', error);
         setAvailableCategories(['Science', 'Art', 'Technology', 'Business', 'Health']);
       }
-    } catch (error) {
-      console.error('Failed to fetch form configuration:', error);
-      setAvailableCategories(['Science', 'Art', 'Technology', 'Business', 'Health']);
-    }
-  };
-  fetchFormConfig();
-}, []);
+    };
+    fetchFormConfig();
+  }, []);
 
   // Redirect if not authorized
   useEffect(() => {
@@ -123,6 +129,7 @@ useEffect(() => {
 
     setIsLoading(true);
     setError('');
+    setFormSubmitted(true);
 
     try {
       // Prepare the request data
@@ -139,10 +146,15 @@ useEffect(() => {
 
       toast.success('Material created successfully!', {
         description: 'The educational material has been added to the system.',
+        icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+        duration: 3000,
       });
 
-      // Redirect to materials page
-      navigate('/materials');
+      // Show success animation before redirect
+      setTimeout(() => {
+        navigate('/materials');
+      }, 1500);
+      
     } catch (error: any) {
       console.error('Failed to create material:', error);
       
@@ -160,25 +172,46 @@ useEffect(() => {
       setError(errorMessage);
       toast.error('Failed to create material', {
         description: errorMessage,
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        duration: 4000,
       });
+      setFormSubmitted(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addFileUrl = () => {
+  const addFileUrl = async () => {
     if (!newFileUrl.trim()) return;
 
+    setIsAddingFile(true);
+    
+    // Simulate validation delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     const currentFiles = form.getValues('mediaFiles') || [];
     const updatedFiles = [...currentFiles, newFileUrl.trim()];
     form.setValue('mediaFiles', updatedFiles, { shouldValidate: true });
     setNewFileUrl('');
+    setIsAddingFile(false);
+    
+    // Show success feedback
+    toast.success('File URL added', {
+      description: 'The URL has been added to your media files.',
+      duration: 2000,
+    });
   };
 
   const removeFileUrl = (index: number) => {
     const currentFiles = form.getValues('mediaFiles') || [];
     const updatedFiles = currentFiles.filter((_, i) => i !== index);
     form.setValue('mediaFiles', updatedFiles, { shouldValidate: true });
+    
+    // Show removal feedback
+    toast.info('File URL removed', {
+      description: 'The URL has been removed from your media files.',
+      duration: 2000,
+    });
   };
 
   const getCategoryIcon = (category: string) => {
@@ -196,8 +229,8 @@ useEffect(() => {
 
   if (!user || (user.role !== 'Admin' && user.role !== 'Tutor')) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert variant="destructive">
+      <div className="container mx-auto px-4 py-8 animate-fade-in">
+        <Alert variant="destructive" className="animate-shake">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             You do not have permission to access this page.
@@ -208,35 +241,40 @@ useEffect(() => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl animate-slide-in-up">
       <Button
         variant="ghost"
-        className="mb-6"
+        className="mb-6 hover-lift transition-smooth group"
         onClick={() => navigate('/materials')}
       >
-        <ArrowLeft className="mr-2 h-4 w-4" />
+        <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
         Back to Materials
       </Button>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Create Educational Material</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-3xl font-bold animate-fade-in">
+          Create Educational Material
+        </h1>
+        <p className="text-muted-foreground mt-2 animate-fade-in animation-delay-100">
           Add new educational content to the system
         </p>
       </div>
 
-      <Card>
+      <Card className="animate-scale-in transition-smooth hover:shadow-lg">
         <CardHeader>
-          <CardTitle>Material Details</CardTitle>
-          <CardDescription>
+          <CardTitle className="animate-fade-in">Material Details</CardTitle>
+          <CardDescription className="animate-fade-in animation-delay-100">
             Fill in the details for the new educational material
           </CardDescription>
         </CardHeader>
         
         <CardContent>
           {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
+            <Alert 
+              variant="destructive" 
+              className="mb-6 animate-slide-in-right animate-shake"
+            >
+              <AlertCircle className="h-4 w-4 animate-pulse" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -247,18 +285,23 @@ useEffect(() => {
                 control={form.control}
                 name="category"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="animate-fade-in animation-delay-200">
                     <FormLabel>Category</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="hover-scale transition-smooth">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {availableCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            <div className="flex items-center gap-2">
+                      <SelectContent className="animate-scale-in">
+                        {availableCategories.map((category, index) => (
+                          <SelectItem 
+                            key={category} 
+                            value={category}
+                            className="animate-fade-in"
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <div className="flex items-center gap-2 transition-transform hover:translate-x-1">
                               {getCategoryIcon(category)}
                               {category}
                             </div>
@@ -278,12 +321,12 @@ useEffect(() => {
                 control={form.control}
                 name="text"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="animate-fade-in animation-delay-300">
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Enter a detailed description of the material..."
-                        className="min-h-[120px] resize-none"
+                        className="min-h-[120px] resize-none transition-all duration-300 focus:scale-[1.01] focus:shadow-md"
                         {...field}
                       />
                     </FormControl>
@@ -295,7 +338,7 @@ useEffect(() => {
                 )}
               />
 
-              <div>
+              <div className="animate-fade-in animation-delay-400">
                 <FormLabel className="mb-4 block">Media Files</FormLabel>
                 <div className="space-y-4">
                   <div className="flex gap-2">
@@ -310,40 +353,66 @@ useEffect(() => {
                           addFileUrl();
                         }
                       }}
+                      className="transition-all duration-300 focus:scale-[1.02]"
                     />
-                    <Button type="button" onClick={addFileUrl}>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Add URL
+                    <Button 
+                      type="button" 
+                      onClick={addFileUrl}
+                      disabled={isAddingFile || !newFileUrl.trim()}
+                      className="hover-scale transition-smooth relative overflow-hidden"
+                    >
+                      {isAddingFile ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add URL
+                        </>
+                      )}
                     </Button>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground animate-fade-in">
                     <p>Add links to educational resources like:</p>
                     <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>YouTube videos (https://youtube.com/watch?v=...)</li>
-                      <li>PDF documents (https://example.com/document.pdf)</li>
-                      <li>Image galleries (https://imgur.com/gallery/...)</li>
-                      <li>Online articles (https://medium.com/article/...)</li>
+                      {[
+                        'YouTube videos (https://youtube.com/watch?v=...)',
+                        'PDF documents (https://example.com/document.pdf)',
+                        'Image galleries (https://imgur.com/gallery/...)',
+                        'Online articles (https://medium.com/article/...)'
+                      ].map((item, index) => (
+                        <li 
+                          key={index}
+                          className="animate-fade-in"
+                          style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                          {item}
+                        </li>
+                      ))}
                     </ul>
                   </div>
 
                   {form.watch('mediaFiles')?.length > 0 && (
-                    <div className="mt-4">
+                    <div className="mt-4 animate-slide-in-up">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Added Files</span>
                         <span className="text-sm text-muted-foreground">
                           {form.watch('mediaFiles')?.length} file(s)
                         </span>
                       </div>
-                      <Separator />
+                      <Separator className="animate-fade-in" />
                       <div className="space-y-2 mt-3">
                         {form.watch('mediaFiles')?.map((url, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg animate-fade-in hover:bg-muted/70 transition-all duration-300 group"
+                            style={{ animationDelay: `${index * 50}ms` }}
                           >
                             <div className="flex items-center gap-3">
-                              <Link className="h-4 w-4 text-muted-foreground" />
+                              <Link className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                               <div className="truncate max-w-md">
                                 <p className="text-sm font-medium truncate">
                                   {url.replace(/^https?:\/\//, '').split('/')[0]}
@@ -358,6 +427,7 @@ useEffect(() => {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeFileUrl(index)}
+                              className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -369,13 +439,16 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div className="bg-muted/30 rounded-lg p-4">
+              <div className="bg-muted/30 rounded-lg p-4 animate-fade-in animation-delay-500 transition-all duration-300 hover:bg-muted/40">
                 <h3 className="font-medium mb-2">Preview</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Category:</span>
                     {form.watch('category') ? (
-                      <Badge variant="outline" className="flex items-center gap-1">
+                      <Badge 
+                        variant="outline" 
+                        className="flex items-center gap-1 animate-scale-in"
+                      >
                         {getCategoryIcon(form.watch('category'))}
                         {form.watch('category')}
                       </Badge>
@@ -385,14 +458,16 @@ useEffect(() => {
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Description:</span>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-1 animate-fade-in">
                       {form.watch('text') || 'No description provided'}
                     </p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Files:</span>
                     <p className="text-sm mt-1">
-                      {form.watch('mediaFiles')?.length || 0} file(s) attached
+                      <span className={form.watch('mediaFiles')?.length ? 'animate-pulse-slow' : ''}>
+                        {form.watch('mediaFiles')?.length || 0} file(s) attached
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -401,28 +476,37 @@ useEffect(() => {
           </Form>
         </CardContent>
 
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between animate-fade-in animation-delay-600">
           <Button
             variant="outline"
             onClick={() => navigate('/materials')}
             disabled={isLoading}
+            className="hover-scale transition-smooth"
           >
             Cancel
           </Button>
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={isLoading}
+            className={`hover-scale transition-smooth relative overflow-hidden ${
+              formSubmitted && !isLoading ? 'bg-green-600 hover:bg-green-700' : ''
+            }`}
           >
             {isLoading ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <div className="flex items-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
-              </>
+              </div>
+            ) : formSubmitted && !isLoading ? (
+              <div className="flex items-center animate-bounce-in">
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Created Successfully!
+              </div>
             ) : (
-              <>
+              <div className="flex items-center">
                 <BookOpen className="mr-2 h-4 w-4" />
                 Create Material
-              </>
+              </div>
             )}
           </Button>
         </CardFooter>

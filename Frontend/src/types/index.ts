@@ -41,20 +41,20 @@ export enum ContentCategory {
   Health = 'Health'
 }
 
-export interface Material {
-  MaterialId: number;
-  CreationDate: string;
-  ContentId?: number;
-  Content?: {
-    ContentId?: number;
-    Text: string;
-    MediaFiles: string[];
-    Category?: ContentCategory | string | number;
+interface Material {
+  materialId: number;
+  userId: number;
+  userName?: string;
+  creationDate: string;
+  content: {
+    text: string;
+    mediaFiles: string[];
   };
-  UserId: number;
-  User?: any;
-  Test?: any;
-  Category?: ContentCategory | string | number;
+  category?: number;
+  user?: {
+    name?: string;
+    Name?: string;
+  };
 }
 
 export const mapApiMaterial = (apiMaterial: any): Material => ({

@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import {
   CheckCircle,
   TrendingUp,
   Eye,
+  Quote,
 } from 'lucide-react';
 import {
   Card,
@@ -43,6 +44,24 @@ import { Separator } from '../components/ui/separator';
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [animateHero, setAnimateHero] = useState(false);
+  const [animateCards, setAnimateCards] = useState(false);
+  const [animateFeatures, setAnimateFeatures] = useState(false);
+  const [animateMission, setAnimateMission] = useState(false);
+  const [animateTestimonials, setAnimateTestimonials] = useState(false);
+
+  useEffect(() => {
+    // Stagger animations
+    const timers = [
+      setTimeout(() => setAnimateHero(true), 100),
+      setTimeout(() => setAnimateCards(true), 300),
+      setTimeout(() => setAnimateFeatures(true), 500),
+      setTimeout(() => setAnimateMission(true), 700),
+      setTimeout(() => setAnimateTestimonials(true), 900),
+    ];
+
+    return () => timers.forEach(timer => clearTimeout(timer));
+  }, []);
 
   const features = [
     {
@@ -52,6 +71,7 @@ export const DashboardPage: React.FC = () => {
       color: "from-blue-500 to-cyan-500",
       iconColor: "text-blue-600",
       badge: "New",
+      animationDelay: 0,
     },
     {
       title: "Expert-Curated Content",
@@ -60,6 +80,7 @@ export const DashboardPage: React.FC = () => {
       color: "from-purple-500 to-pink-500",
       iconColor: "text-purple-600",
       badge: "Verified",
+      animationDelay: 100,
     },
     {
       title: "Progress Tracking",
@@ -68,6 +89,7 @@ export const DashboardPage: React.FC = () => {
       color: "from-green-500 to-emerald-500",
       iconColor: "text-green-600",
       badge: "Beta",
+      animationDelay: 200,
     },
     {
       title: "Collaborative Learning",
@@ -76,6 +98,7 @@ export const DashboardPage: React.FC = () => {
       color: "from-orange-500 to-amber-500",
       iconColor: "text-orange-600",
       badge: "Community",
+      animationDelay: 300,
     },
   ];
 
@@ -87,6 +110,7 @@ export const DashboardPage: React.FC = () => {
       action: "Browse Library",
       href: "/materials",
       gradient: "from-blue-400 to-blue-600",
+      animationDelay: 0,
     },
     {
       title: "Start Learning",
@@ -95,6 +119,7 @@ export const DashboardPage: React.FC = () => {
       action: "View Paths",
       href: "/tests",
       gradient: "from-purple-400 to-purple-600",
+      animationDelay: 150,
     },
     {
       title: "Connect & Share",
@@ -103,6 +128,7 @@ export const DashboardPage: React.FC = () => {
       action: "Join Community",
       href: "/reviews",
       gradient: "from-green-400 to-green-600",
+      animationDelay: 300,
     },
   ];
 
@@ -112,18 +138,21 @@ export const DashboardPage: React.FC = () => {
       role: "Education Specialist",
       quote: "This platform has revolutionized how we deliver educational content.",
       avatar: "SC",
+      animationDelay: 0,
     },
     {
       name: "Marcus Johnson",
       role: "University Student",
       quote: "The interactive materials made complex concepts easy to understand.",
       avatar: "MJ",
+      animationDelay: 200,
     },
     {
       name: "Professor Alvaro",
       role: "Lead Educator",
       quote: "A perfect blend of technology and pedagogy for modern learning.",
       avatar: "PA",
+      animationDelay: 400,
     },
   ];
 
@@ -133,18 +162,21 @@ export const DashboardPage: React.FC = () => {
       description: "Personalized learning paths based on your progress",
       icon: Sparkles,
       status: "Coming Soon",
+      animationDelay: 0,
     },
     {
       title: "Live Collaboration Tools",
       description: "Real-time study sessions and group projects",
       icon: Globe,
       status: "In Development",
+      animationDelay: 100,
     },
     {
       title: "Mobile Learning App",
       description: "Learn on-the-go with our dedicated mobile application",
       icon: Zap,
       status: "Q2 2024",
+      animationDelay: 200,
     },
   ];
 
@@ -156,70 +188,107 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border p-8">
+      <div className={`
+        relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border p-8
+        transition-all duration-1000 transform
+        ${animateHero ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+      `}>
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <Badge variant="outline" className="text-xs">
+          <div className="flex items-center gap-2 mb-4 animate-fade-in">
+            <Sparkles className="h-5 w-5 text-primary animate-pulse-slow" />
+            <Badge 
+              variant="outline" 
+              className="text-xs animate-scale-in"
+              style={{ animationDelay: '200ms' }}
+            >
               {user?.role || 'Learner'}
             </Badge>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-4">
-            {getGreeting()}, <span className="text-primary">{user?.name || 'Learner'}</span>!
+          <h1 className="text-4xl font-bold tracking-tight mb-4 animate-slide-in-right">
+            {getGreeting()}, <span className="text-primary animate-text-gradient">{user?.name || 'Learner'}</span>!
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl">
+          <p className="text-xl text-muted-foreground max-w-3xl animate-fade-in animation-delay-300">
             Welcome to EduSystem - where learning meets innovation. 
             Discover a world of knowledge through interactive materials, 
             expert guidance, and a supportive community.
           </p>
-          <div className="flex flex-wrap gap-4 mt-8">
-            <Button size="lg" onClick={() => navigate('/materials')}>
-              <BookOpen className="mr-2 h-5 w-5" />
+          <div className="flex flex-wrap gap-4 mt-8 animate-fade-in animation-delay-500">
+            <Button 
+              size="lg" 
+              onClick={() => navigate('/materials')}
+              className="hover-scale transition-smooth group"
+            >
+              <BookOpen className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
               Start Learning
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
         </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/20 to-transparent rounded-full -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-secondary/20 to-transparent rounded-full -translate-x-24 translate-y-24" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/20 to-transparent rounded-full -translate-y-32 translate-x-32 animate-float-slow" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-secondary/20 to-transparent rounded-full -translate-x-24 translate-y-24 animate-float" />
       </div>
 
       {/* Quick Start Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {quickStartCards.map((card, index) => (
-          <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/50">
-            <CardHeader className="pb-4">
-              <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${card.gradient}`}>
-                <card.icon className="h-6 w-6 text-white" />
-              </div>
-              <CardTitle className="mt-4">{card.title}</CardTitle>
-              <CardDescription>{card.description}</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-between group-hover:text-primary"
-                onClick={() => navigate(card.href)}
-              >
-                {card.action}
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+        {quickStartCards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <Card 
+              key={index}
+              className={`
+                group hover:shadow-xl transition-all duration-500 border-2 hover:border-primary/50 
+                hover:scale-[1.02] hover-lift
+                transform transition-all duration-700
+                ${animateCards ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+              `}
+              style={{ 
+                transitionDelay: `${card.animationDelay}ms`,
+                animationDelay: `${card.animationDelay}ms`,
+              }}
+            >
+              <CardHeader className="pb-4">
+                <div className={`
+                  inline-flex p-3 rounded-xl bg-gradient-to-br ${card.gradient} 
+                  animate-pulse-slow group-hover:scale-110 transition-transform duration-300
+                `}>
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+                <CardTitle className="mt-4 animate-fade-in animation-delay-200">{card.title}</CardTitle>
+                <CardDescription className="animate-fade-in animation-delay-300">{card.description}</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-between group-hover:text-primary transition-all duration-300"
+                  onClick={() => navigate(card.href)}
+                >
+                  {card.action}
+                  <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Platform Features */}
       <div>
-        <div className="text-center mb-8">
-          <Badge variant="secondary" className="mb-4">
-            <Sparkles className="h-3 w-3 mr-1" />
+        <div className={`
+          text-center mb-8 transform transition-all duration-700
+          ${animateFeatures ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+        `}>
+          <Badge 
+            variant="secondary" 
+            className="mb-4 animate-bounce-in"
+            style={{ animationDelay: '100ms' }}
+          >
+            <Sparkles className="h-3 w-3 mr-1 animate-spin-slow" />
             Why Choose EduSystem
           </Badge>
-          <h2 className="text-3xl font-bold mb-4">Designed for Modern Learning</h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold mb-4 animate-fade-in animation-delay-200">Designed for Modern Learning</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto animate-fade-in animation-delay-300">
             Our platform combines cutting-edge technology with proven educational methodologies.
           </p>
         </div>
@@ -228,29 +297,50 @@ export const DashboardPage: React.FC = () => {
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <Card key={index} className="relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${feature.color}`} />
+              <Card 
+                key={index} 
+                className={`
+                  relative overflow-hidden group hover:shadow-xl transition-all duration-500
+                  hover:scale-[1.03] hover-lift animate-fade-in
+                  ${animateFeatures ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+                `}
+                style={{ 
+                  animationDelay: `${feature.animationDelay}ms`,
+                  transitionDelay: `${feature.animationDelay}ms`,
+                }}
+              >
+                <div className={`
+                  absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${feature.color}
+                  group-hover:h-2 transition-all duration-300
+                `} />
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <div className={`p-2 rounded-lg ${feature.iconColor.replace('text', 'bg').replace('600', '100')}`}>
-                      <Icon className={`h-5 w-5 ${feature.iconColor}`} />
+                    <div className={`
+                      p-2 rounded-lg ${feature.iconColor.replace('text', 'bg').replace('600', '100')}
+                      group-hover:scale-110 transition-transform duration-300
+                    `}>
+                      <Icon className={`h-5 w-5 ${feature.iconColor} animate-pulse`} />
                     </div>
                     {feature.badge && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs animate-scale-in"
+                        style={{ animationDelay: `${feature.animationDelay + 200}ms` }}
+                      >
                         {feature.badge}
                       </Badge>
                     )}
                   </div>
-                  <CardTitle className="mt-4 text-lg">{feature.title}</CardTitle>
+                  <CardTitle className="mt-4 text-lg animate-fade-in animation-delay-100">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground animate-fade-in animation-delay-200">
                     {feature.description}
                   </p>
                 </CardContent>
                 <CardContent className="pt-0">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CheckCircle className="h-3 w-3" />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground animate-fade-in animation-delay-300">
+                    <CheckCircle className="h-3 w-3 animate-pulse-slow" />
                     <span>Available now</span>
                   </div>
                 </CardContent>
@@ -260,15 +350,18 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Upcoming Features */}
+      {/* Upcoming Features & Mission */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
+        <Card className={`
+          transform transition-all duration-700
+          ${animateMission ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}
+        `}>
           <CardHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <Rocket className="h-5 w-5 text-primary" />
-              <CardTitle>What's Coming Next</CardTitle>
+            <div className="flex items-center gap-2 mb-2 animate-fade-in">
+              <Rocket className="h-5 w-5 text-primary animate-bounce" />
+              <CardTitle className="animate-slide-in-right">What's Coming Next</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="animate-fade-in animation-delay-200">
               Exciting features currently in development
             </CardDescription>
           </CardHeader>
@@ -276,18 +369,29 @@ export const DashboardPage: React.FC = () => {
             {upcomingFeatures.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="flex items-start gap-4 p-4 rounded-lg border hover:bg-accent/50 transition-colors">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Icon className="h-5 w-5 text-primary" />
+                <div 
+                  key={index}
+                  className={`
+                    flex items-start gap-4 p-4 rounded-lg border hover:bg-accent/50 transition-all duration-300
+                    hover:scale-[1.02] hover-lift animate-fade-in
+                  `}
+                  style={{ animationDelay: `${feature.animationDelay}ms` }}
+                >
+                  <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                    <Icon className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="font-semibold">{feature.title}</p>
-                      <Badge variant="outline" className="text-xs">
+                      <p className="font-semibold animate-fade-in">{feature.title}</p>
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs animate-scale-in"
+                        style={{ animationDelay: `${feature.animationDelay + 100}ms` }}
+                      >
                         {feature.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    <p className="text-sm text-muted-foreground animate-fade-in animation-delay-100">{feature.description}</p>
                   </div>
                 </div>
               );
@@ -295,38 +399,42 @@ export const DashboardPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-primary/5 via-transparent to-secondary/5">
+        <Card className={`
+          bg-gradient-to-br from-primary/5 via-transparent to-secondary/5
+          transform transition-all duration-700
+          ${animateMission ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}
+        `}>
           <CardHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="h-5 w-5 text-primary" />
-              <CardTitle>Our Mission</CardTitle>
+            <div className="flex items-center gap-2 mb-2 animate-fade-in">
+              <Heart className="h-5 w-5 text-primary animate-heartbeat" />
+              <CardTitle className="animate-slide-in-left">Our Mission</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="animate-fade-in animation-delay-200">
               Making quality education accessible to everyone
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-background/50 border">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
+            <div className="p-4 rounded-lg bg-background/50 border hover:scale-[1.02] transition-all duration-300 animate-fade-in">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 animate-fade-in">
+                <Target className="h-4 w-4 text-primary animate-spin-slow" />
                 Vision Statement
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground animate-fade-in animation-delay-100">
                 To create a world where anyone, anywhere can transform their life through accessible, engaging, and effective education.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-background/50 border">
+            <div className="p-4 rounded-lg bg-background/50 border hover:scale-[1.02] transition-all duration-300 animate-fade-in animation-delay-200">
               <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
+                <Shield className="h-4 w-4 text-primary animate-pulse" />
                 Our Commitment
               </h3>
               <p className="text-sm text-muted-foreground">
                 We are dedicated to providing high-quality educational resources, fostering a supportive community, and continuously innovating to enhance the learning experience.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-background/50 border">
+            <div className="p-4 rounded-lg bg-background/50 border hover:scale-[1.02] transition-all duration-300 animate-fade-in animation-delay-300">
               <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-primary" />
+                <Lightbulb className="h-4 w-4 text-primary animate-pulse-slow" />
                 Join the Journey
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -335,8 +443,11 @@ export const DashboardPage: React.FC = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" onClick={() => navigate('/materials')}>
-              <Star className="mr-2 h-4 w-4" />
+            <Button 
+              className="w-full hover-scale transition-smooth group animate-fade-in animation-delay-400"
+              onClick={() => navigate('/materials')}
+            >
+              <Star className="mr-2 h-4 w-4 group-hover:rotate-180 transition-transform duration-700" />
               Begin Your Learning Journey
             </Button>
           </CardFooter>
@@ -344,37 +455,35 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Call to Action */}
-      <div className="text-center py-8">
-        <h2 className="text-2xl font-bold mb-4">Ready to Transform Your Learning?</h2>
-        <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+      <div className={`
+        text-center py-8 transform transition-all duration-700
+        ${animateTestimonials ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+      `}>
+        <h2 className="text-2xl font-bold mb-4 animate-fade-in">Ready to Transform Your Learning?</h2>
+        <p className="text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in animation-delay-200">
           Join thousands of learners who have already started their educational journey with EduSystem.
         </p>
-        <div className="flex flex-wrap gap-4 justify-center">
-          <Button size="lg" variant="default" onClick={() => navigate('/materials')}>
-            <BookOpen className="mr-2 h-5 w-5" />
+        <div className="flex flex-wrap gap-4 justify-center animate-fade-in animation-delay-400">
+          <Button 
+            size="lg" 
+            variant="default" 
+            onClick={() => navigate('/materials')}
+            className="hover-scale transition-smooth group animate-pulse-slow"
+          >
+            <BookOpen className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
             Explore Learning Materials
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline" 
+            onClick={() => navigate('/tests')}
+            className="hover-scale transition-smooth group"
+          >
+            <Brain className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+            Take a Knowledge Test
           </Button>
         </div>
       </div>
     </div>
   );
 };
-
-// Add missing Quote icon component
-const Quote: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
-    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-  </svg>
-);

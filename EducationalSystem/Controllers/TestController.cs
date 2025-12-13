@@ -14,22 +14,21 @@ public class TestController : ControllerBase
 {
     private readonly ITestService _testService;
     private readonly ILogger<TestController> _logger;
+    private readonly IMaterialService _materialService;
 
-    public TestController(ITestService testService, ILogger<TestController> logger)
+    public TestController(ITestService testService,IMaterialService materialService, ILogger<TestController> logger)
     {
         _testService = testService;
         _logger = logger;
+        _materialService = materialService;
     }
 
     [HttpGet("create-form")]
     [Authorize(Roles = "Tutor,Admin")]
-    public IActionResult GetCreateTestForm()
+    public async Task<IActionResult> GetCreateTestForm()
     {
-        return Ok(new
-        {
-            Fields = new[] { "MaterialId", "Questions" },
-            QuestionFormat = "Each question should have QuestionText and AnswerText"
-        });
+        var materials = await _materialService.GetAllMaterials();
+        return Ok(materials);
     }
 
     [HttpPost]
