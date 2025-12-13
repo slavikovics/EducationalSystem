@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace EducationalSystem.Models;
 
@@ -20,5 +21,6 @@ public class Question
     public long TestId { get; set; }
     
     [ForeignKey("TestId")]
+    [JsonIgnore]
     public virtual Test? Test { get; set; }
 }

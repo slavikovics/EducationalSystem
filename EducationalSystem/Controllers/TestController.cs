@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using EducationalSystem.DTOs;
 using EducationalSystem.Models;
 using EducationalSystem.Services;
@@ -153,6 +154,7 @@ public class TestController : ControllerBase
         try
         {
             var tests = await _testService.GetAllTests();
+            _logger.LogInformation($"All tests: {JsonSerializer.Serialize(tests)}");
             return Ok(tests);
         }
         catch (Exception ex)

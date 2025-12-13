@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace EducationalSystem.Models;
 
@@ -10,6 +11,5 @@ public class Material
     public virtual Content? Content { get; set; }
     public long UserId { get; set; }
     public virtual User? User { get; set; }
-    public virtual Test? Test { get; set; }
     public ContentCategory? Category { get; set; }
 }

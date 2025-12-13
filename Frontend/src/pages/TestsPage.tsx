@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   X, 
   Plus, 
@@ -27,11 +28,14 @@ import {
   GraduationCap,
   Search,
   Filter,
-  ArrowRight
+  ArrowRight,
+  CircleCheck,
+  Circle
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+
 import {
   Dialog,
   DialogContent,
@@ -97,13 +101,21 @@ export function TestsPage() {
   const [animateFilters, setAnimateFilters] = useState(false)
   const [animateTable, setAnimateTable] = useState(false)
   const [hoveredTest, setHoveredTest] = useState<number | null>(null)
+
+  const { user } = useAuth();
+  const userRole = user.role;
+  const isAdminOrTutor = userRole === 'Admin' || userRole === 'Tutor';
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  
+  // Validation states
+  const [duplicateQuestions, setDuplicateQuestions] = useState<string[]>([])
+  const [duplicateOptions, setDuplicateOptions] = useState<{[key: number]: string[]}>({})
+  const [answerNotInOptions, setAnswerNotInOptions] = useState<{[key: number]: boolean}>({})
   
   // Messages
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
@@ -121,7 +133,15 @@ export function TestsPage() {
     ]
   })
 
-  const [editQuestions, setEditQuestions] = useState<Question[]>([])
+  const getMaterialText = (material: any): string => {
+    if (!material) return 'No material content';
+    return material.content?.text || 
+           material.Content?.Text || 
+           material.text || 
+           material.description || 
+           'No material content';
+  };
+
   const [submitFormData, setSubmitFormData] = useState<SubmitTestFormData>({
     answers: {}
   })
@@ -139,22 +159,82 @@ export function TestsPage() {
     setTimeout(() => setAnimateTable(true), 600)
   }, [])
 
-  // Apply filters
   useEffect(() => {
-    let filtered = tests
+    let filtered = tests;
 
     if (searchTerm) {
-      filtered = filtered.filter(test =>
-        test.material?.Content?.Text.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      filtered = filtered.filter(test => {
+        const materialText = test.material?.content?.text || 
+                            test.material?.Content?.Text || 
+                            '';
+        return materialText.toLowerCase().includes(searchTerm.toLowerCase());
+      });
     }
 
     if (materialIdFilter !== 'all') {
-      filtered = filtered.filter(test => test.materialId === materialIdFilter)
+      filtered = filtered.filter(test => test.materialId === materialIdFilter);
     }
 
-    setFilteredTests(filtered)
+    setFilteredTests(filtered);
   }, [tests, searchTerm, materialIdFilter])
+
+  // Validate duplicate questions and answers
+  useEffect(() => {
+    if (createDialogOpen) {
+      validateTestForm();
+    }
+  }, [createFormData, createDialogOpen])
+
+  const validateTestForm = () => {
+    const questions = createFormData.questions;
+    
+    // Check for duplicate questions
+    const questionTexts = questions.map(q => q.questionText.trim().toLowerCase());
+    const duplicates: string[] = [];
+    const seen = new Set();
+    
+    questionTexts.forEach((text, index) => {
+      if (text && seen.has(text)) {
+        duplicates.push(`Question ${index + 1}`);
+      }
+      seen.add(text);
+    });
+    
+    setDuplicateQuestions(duplicates);
+    
+    // Check for duplicate options within each question
+    const optionsDuplicates: {[key: number]: string[]} = {};
+    const answerNotInOptionsMap: {[key: number]: boolean} = {};
+    
+    questions.forEach((question, qIndex) => {
+      const optionMap = new Map();
+      question.options?.forEach((option, oIndex) => {
+        const trimmedOption = option.trim().toLowerCase();
+        if (trimmedOption) {
+          if (optionMap.has(trimmedOption)) {
+            if (!optionsDuplicates[qIndex]) {
+              optionsDuplicates[qIndex] = [];
+            }
+            optionsDuplicates[qIndex].push(`Option ${oIndex + 1}`);
+          }
+          optionMap.set(trimmedOption, oIndex);
+        }
+      });
+      
+      // Check if answer is in options
+      if (question.answerText && question.options) {
+        const answerInOptions = question.options.some(option => 
+          option.trim().toLowerCase() === question.answerText.trim().toLowerCase()
+        );
+        if (!answerInOptions) {
+          answerNotInOptionsMap[qIndex] = true;
+        }
+      }
+    });
+    
+    setDuplicateOptions(optionsDuplicates);
+    setAnswerNotInOptions(answerNotInOptionsMap);
+  }
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage({ text, type })
@@ -193,27 +273,72 @@ export function TestsPage() {
 
   const loadCreateForm = async () => {
     try {
-      clearErrors()
+      clearErrors();
       const response = await materialsAPI.getAllMaterials();
       console.log('Materials response:', response);
 
-      const processedMaterials = response.map((material: any) => ({
-        materialId: material.materialId || material.id || 0,
-        userId: material.userId || 0,
-        userName: material.user?.name || material.user?.Name || material.userName || `User ${material.userId}`,
-        creationDate: material.creationDate || material.createdAt || material.date || new Date().toISOString(),
-        content: {
-          text: material.content?.text || material.text || material.description || 'No description',
-          mediaFiles: material.content?.mediaFiles || material.mediaFiles || [],
-        },
-        category: material.category,
-        user: material.user
-      }));
+      // Handle different response formats
+      const materialsData = response.data || response.Materials || response;
+      
+      if (!Array.isArray(materialsData)) {
+        console.error('Materials data is not an array:', materialsData);
+        setMaterials([]);
+        return;
+      }
+
+      const processedMaterials = materialsData.map((material: any) => {
+        // Extract material ID from various possible property names
+        const materialId = material.materialId || material.id || material.MaterialId || 0;
+        
+        // Extract content text from various possible property names and structures
+        const contentText = 
+          material.content?.text || 
+          material.Content?.Text || 
+          material.text || 
+          material.description || 
+          material.Content || 
+          'No description available';
+        
+        // Extract media files
+        const mediaFiles = 
+          material.content?.mediaFiles || 
+          material.mediaFiles || 
+          material.MediaFiles || 
+          [];
+        
+        // Extract user info
+        const userName = 
+          material.user?.name || 
+          material.user?.Name || 
+          material.userName || 
+          `User ${material.userId || material.UserId || 0}`;
+        
+        return {
+          materialId: materialId,
+          MaterialId: materialId, // Add for backward compatibility
+          userId: material.userId || material.UserId || 0,
+          userName: userName,
+          creationDate: material.creationDate || material.createdAt || material.date || new Date().toISOString(),
+          content: {
+            text: contentText,
+            mediaFiles: mediaFiles,
+          },
+          Content: { // Add for backward compatibility
+            Text: contentText,
+            MediaFiles: mediaFiles
+          },
+          category: material.category || material.Category,
+          user: material.user || material.User
+        };
+      });
       
       setMaterials(processedMaterials);
-      console.log("Materials count: " + processedMaterials.length)
+      console.log("Processed materials count: " + processedMaterials.length);
+      console.log("Sample material:", processedMaterials[0]);
+      
     } catch (error) {
-      console.error('Failed to load create form data:', error)
+      console.error('Failed to load create form data:', error);
+      showError('Failed to load materials');
     }
   }
 
@@ -235,25 +360,25 @@ export function TestsPage() {
     return null
   }
 
-  const loadEditForm = async (id: number) => {
-    try {
-      clearErrors()
-      const response = await testsAPI.getEditForm(id) as ApiResponse<{ questions: Question[] }>
-      
-      if (response.success || response.data) {
-        const data = response.data || response
-        setEditQuestions(data.questions || [])
-        return data
-      } else {
-        showError(response.error || 'Failed to load edit form')
-      }
-    } catch (error: any) {
-      showError(error)
-    }
-    return null
-  }
-
   const handleCreateTest = async () => {
+    // Validate before submitting
+    if (duplicateQuestions.length > 0) {
+      showMessage('Please fix duplicate questions before creating test', 'error')
+      return
+    }
+    
+    const hasDuplicateOptions = Object.keys(duplicateOptions).length > 0;
+    if (hasDuplicateOptions) {
+      showMessage('Please fix duplicate options before creating test', 'error')
+      return
+    }
+    
+    const hasAnswerNotInOptions = Object.keys(answerNotInOptions).length > 0;
+    if (hasAnswerNotInOptions) {
+      showMessage('Please ensure answers match one of the options', 'error')
+      return
+    }
+    
     try {
       setIsSubmitting(true)
       clearErrors()
@@ -266,26 +391,6 @@ export function TestsPage() {
         loadTests()
       } else {
         showError(response.error || 'Failed to create test')
-      }
-    } catch (error: any) {
-      showError(error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleUpdateTest = async (id: number) => {
-    try {
-      setIsSubmitting(true)
-      clearErrors()
-      const response = await testsAPI.update(id, editQuestions) as ApiResponse<Test>
-      
-      if (response.success || response.data || response.Message) {
-        showMessage(response.message || response.Message || 'Test updated successfully')
-        setEditDialogOpen(false)
-        loadTests()
-      } else {
-        showError(response.error || 'Failed to update test')
       }
     } catch (error: any) {
       showError(error)
@@ -367,6 +472,9 @@ export function TestsPage() {
         }
       ]
     })
+    setDuplicateQuestions([])
+    setDuplicateOptions({})
+    setAnswerNotInOptions({})
   }
 
   const resetSubmitForm = () => {
@@ -376,18 +484,15 @@ export function TestsPage() {
   }
 
   const handleViewTest = async (test: Test) => {
+    if (!isAdminOrTutor) {
+      showMessage('You need admin or tutor privileges to view test details', 'error')
+      return
+    }
+    
     const details = await loadTestDetails(test.testId!)
     if (details) {
       setSelectedTest(details)
       setViewDialogOpen(true)
-    }
-  }
-
-  const handleEditTest = async (test: Test) => {
-    const formData = await loadEditForm(test.testId!)
-    if (formData) {
-      setSelectedTest(test)
-      setEditDialogOpen(true)
     }
   }
 
@@ -501,16 +606,18 @@ export function TestsPage() {
             </h1>
           </div>
           <p className="text-muted-foreground animate-fade-in animation-delay-300">
-            Create, manage, and submit knowledge assessments
+            {isAdminOrTutor ? 'Create, manage, and submit knowledge assessments' : 'Take tests to assess your knowledge'}
           </p>
         </div>
-        <Button 
-          onClick={() => setCreateDialogOpen(true)}
-          className="hover-scale transition-smooth group animate-fade-in animation-delay-400"
-        >
-          <Plus className="mr-2 h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
-          Create Test
-        </Button>
+        {isAdminOrTutor && (
+          <Button 
+            onClick={() => setCreateDialogOpen(true)}
+            className="hover-scale transition-smooth group animate-fade-in animation-delay-400"
+          >
+            <Plus className="mr-2 h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
+            Create Test
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -554,12 +661,12 @@ export function TestsPage() {
                 <SelectItem value="all" className="hover-scale transition-smooth">All Materials</SelectItem>
                 {materials.map((material, index) => (
                   <SelectItem 
-                    key={material.MaterialId} 
-                    value={material.MaterialId}
+                    key={material.materialId} 
+                    value={material.materialId.toString()}
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {material.Content?.Text.substring(0, 30)}...
+                    {material.content.text.substring(0, 30)}...
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -658,7 +765,7 @@ export function TestsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="overflow-hidden">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Test ID</TableHead>
@@ -694,7 +801,9 @@ export function TestsPage() {
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="truncate group-hover:text-primary transition-colors">
-                        {test.material?.Content?.Text.substring(0, 50)}...
+                        {test.material?.content?.text?.substring(0, 50) || 
+                         test.material?.Content?.Text?.substring(0, 50) || 
+                         'No material content'}...
                       </div>
                     </TableCell>
                     <TableCell>
@@ -721,22 +830,17 @@ export function TestsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewTest(test)}
-                          className="hover-scale transition-smooth"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditTest(test)}
-                          className="hover-scale transition-smooth"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        {isAdminOrTutor && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewTest(test)}
+                            className="hover-scale transition-smooth"
+                            title="View Test Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -745,20 +849,24 @@ export function TestsPage() {
                             setSubmitDialogOpen(true)
                           }}
                           className="hover-scale transition-smooth"
+                          title="Take Test"
                         >
                           <GraduationCap className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTest(test)
-                            setDeleteDialogOpen(true)
-                          }}
-                          className="hover-scale transition-smooth"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {isAdminOrTutor && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedTest(test)
+                              setDeleteDialogOpen(true)
+                            }}
+                            className="hover-scale transition-smooth"
+                            title="Delete Test"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -781,6 +889,18 @@ export function TestsPage() {
               Design a new knowledge assessment for learning materials
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Validation Alerts */}
+          {duplicateQuestions.length > 0 && (
+            <Alert variant="destructive" className="animate-fade-in">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Duplicate Questions</AlertTitle>
+              <AlertDescription>
+                The following questions are duplicates: {duplicateQuestions.join(', ')}. Please make each question unique.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="space-y-6 py-4">
             <div className="space-y-3 animate-fade-in animation-delay-300">
               <Label htmlFor="materialId" className="flex items-center gap-2">
@@ -788,7 +908,8 @@ export function TestsPage() {
                 Select Material
               </Label>
               <Select
-                value={createFormData.materialId}
+                className="w-100"
+                value={createFormData.materialId.toString()}
                 onValueChange={(value) => 
                   setCreateFormData({...createFormData, materialId: parseInt(value)})
                 }
@@ -799,12 +920,12 @@ export function TestsPage() {
                 <SelectContent className="animate-scale-in">
                   {materials.map((material, index) => (
                     <SelectItem 
-                      key={material.MaterialId} 
-                      value={material.MaterialId}
+                      key={material.materialId} 
+                      value={material.materialId.toString()}
                       className="animate-fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      {material.Content?.Text.substring(0, 100)}...
+                      {material.content.text.substring(0, 100)}...
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -837,52 +958,94 @@ export function TestsPage() {
                 >
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`question-${index}`} className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-muted-foreground" />
-                        Question {index + 1}
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor={`question-${index}`} className="flex items-center gap-2">
+                          <Brain className="h-4 w-4 text-muted-foreground" />
+                          Question {index + 1}
+                        </Label>
+                        {duplicateQuestions.includes(`Question ${index + 1}`) && (
+                          <Badge variant="destructive" className="text-xs">
+                            Duplicate
+                          </Badge>
+                        )}
+                      </div>
                       <Textarea
                         id={`question-${index}`}
                         value={question.questionText}
                         onChange={(e) => updateCreateQuestion(index, 'questionText', e.target.value)}
                         placeholder="Enter the question"
-                        className="transition-all duration-300 focus:scale-[1.01] focus:shadow-md"
+                        className={`transition-all duration-300 focus:scale-[1.01] focus:shadow-md ${
+                          duplicateQuestions.includes(`Question ${index + 1}`) ? 'border-red-500' : ''
+                        }`}
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label>Options</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Options</Label>
+                        {duplicateOptions[index] && (
+                          <Badge variant="destructive" className="text-xs">
+                            Duplicate options
+                          </Badge>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         {question.options?.map((option, optIndex) => (
-                          <Input
-                            key={optIndex}
-                            value={option}
-                            onChange={(e) => {
-                              const newOptions = [...(question.options || [])]
-                              newOptions[optIndex] = e.target.value
-                              const newQuestions = [...createFormData.questions]
-                              newQuestions[index].options = newOptions
-                              setCreateFormData({...createFormData, questions: newQuestions})
-                            }}
-                            placeholder={`Option ${optIndex + 1}`}
-                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
-                          />
+                          <div key={optIndex} className="relative">
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...(question.options || [])]
+                                newOptions[optIndex] = e.target.value
+                                const newQuestions = [...createFormData.questions]
+                                newQuestions[index].options = newOptions
+                                setCreateFormData({...createFormData, questions: newQuestions})
+                              }}
+                              placeholder={`Option ${optIndex + 1}`}
+                              className={`transition-all duration-300 focus:scale-[1.02] focus:shadow-md ${
+                                duplicateOptions[index]?.includes(`Option ${optIndex + 1}`) ? 'border-red-500' : ''
+                              }`}
+                            />
+                            {duplicateOptions[index]?.includes(`Option ${optIndex + 1}`) && (
+                              <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor={`answer-${index}`} className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        Correct Answer
-                      </Label>
-                      <Input
-                        id={`answer-${index}`}
-                        value={question.answerText}
-                        onChange={(e) => updateCreateQuestion(index, 'answerText', e.target.value)}
-                        placeholder="Enter the correct answer"
-                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor={`answer-${index}`} className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          Correct Answer
+                        </Label>
+                        {answerNotInOptions[index] && (
+                          <Badge variant="destructive" className="text-xs">
+                            Not in options
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Input
+                          id={`answer-${index}`}
+                          value={question.answerText}
+                          onChange={(e) => updateCreateQuestion(index, 'answerText', e.target.value)}
+                          placeholder="Enter the correct answer (must match one of the options)"
+                          className={`transition-all duration-300 focus:scale-[1.02] focus:shadow-md ${
+                            answerNotInOptions[index] ? 'border-red-500' : ''
+                          }`}
+                        />
+                        {answerNotInOptions[index] && (
+                          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                      {!answerNotInOptions[index] && question.answerText && (
+                        <div className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Answer matches one of the options
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -892,14 +1055,20 @@ export function TestsPage() {
           <div className="flex justify-end gap-2 animate-fade-in animation-delay-600">
             <Button 
               variant="outline" 
-              onClick={() => setCreateDialogOpen(false)}
+              onClick={() => {
+                setCreateDialogOpen(false)
+                resetCreateForm()
+              }}
               className="hover-scale transition-smooth"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleCreateTest} 
-              disabled={isSubmitting}
+              disabled={isSubmitting || 
+                duplicateQuestions.length > 0 || 
+                Object.keys(duplicateOptions).length > 0 ||
+                Object.keys(answerNotInOptions).length > 0}
               className="hover-scale transition-smooth group"
             >
               {isSubmitting ? (
@@ -918,184 +1087,79 @@ export function TestsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Test Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-3xl animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 animate-fade-in">
-              <Eye className="h-5 w-5 text-primary" />
-              Test Details
-            </DialogTitle>
-            <DialogDescription className="animate-fade-in animation-delay-200">
-              Test ID: #{selectedTest?.testId}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedTest && (
-            <div className="space-y-6 animate-fade-in animation-delay-300">
-              <div className="p-4 bg-gradient-to-r from-muted/50 to-background rounded-lg hover:scale-[1.01] transition-transform">
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Material Content
-                </h4>
-                <p className="text-muted-foreground whitespace-pre-wrap">
-                  {selectedTest.material?.Content?.Text}
-                </p>
-              </div>
-              
-              {selectedTest.questions && selectedTest.questions.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Questions ({selectedTest.questions.length})
+      {/* View Test Dialog (Admin/Tutor only) */}
+      {isAdminOrTutor && (
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-3xl animate-scale-in">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 animate-fade-in">
+                <Eye className="h-5 w-5 text-primary" />
+                Test Details
+              </DialogTitle>
+              <DialogDescription className="animate-fade-in animation-delay-200">
+                Test ID: #{selectedTest?.testId}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedTest && (
+              <div className="space-y-6 animate-fade-in animation-delay-300">
+                <div className="p-4 bg-gradient-to-r from-muted/50 to-background rounded-lg hover:scale-[1.01] transition-transform">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Material Content
                   </h4>
-                  {selectedTest.questions.map((question, index) => (
-                    <Card 
-                      key={question.questionId || index} 
-                      className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      <div className="space-y-3">
-                        <p className="font-medium">Q{index + 1}: {question.questionText}</p>
-                        {question.options && question.options.length > 0 && (
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                              <Brain className="h-3 w-3" />
-                              Options:
-                            </p>
-                            <ul className="space-y-1">
-                              {question.options.map((option, optIndex) => (
-                                <li 
-                                  key={optIndex} 
-                                  className={`p-2 rounded border transition-all duration-300 ${option === question.answerText ? 'bg-green-50 border-green-200 text-green-700 scale-[1.02]' : ''}`}
-                                >
-                                  {option}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        <p className="text-sm pt-2 border-t">
-                          <span className="font-medium flex items-center gap-1">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            Answer:
-                          </span> {question.answerText}
-                        </p>
-                      </div>
-                    </Card>
-                  ))}
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {selectedTest.material?.Content?.Text}
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Test Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 animate-fade-in">
-              <Edit className="h-5 w-5 text-primary" />
-              Edit Test Questions
-            </DialogTitle>
-            <DialogDescription className="animate-fade-in animation-delay-200">
-              Test for: {selectedTest?.material?.Content?.Text.substring(0, 100)}...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {editQuestions.map((question, index) => (
-              <Card 
-                key={question.questionId || index} 
-                className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`edit-question-${index}`} className="flex items-center gap-2">
-                      <Brain className="h-4 w-4 text-muted-foreground" />
-                      Question {index + 1}
-                    </Label>
-                    <Textarea
-                      id={`edit-question-${index}`}
-                      value={question.questionText}
-                      onChange={(e) => {
-                        const newQuestions = [...editQuestions]
-                        newQuestions[index].questionText = e.target.value
-                        setEditQuestions(newQuestions)
-                      }}
-                      className="transition-all duration-300 focus:scale-[1.01] focus:shadow-md"
-                    />
+                
+                {selectedTest.questions && selectedTest.questions.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Questions ({selectedTest.questions.length})
+                    </h4>
+                    {selectedTest.questions.map((question, index) => (
+                      <Card 
+                        key={question.questionId || index} 
+                        className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <div className="space-y-3">
+                          <p className="font-medium">Q{index + 1}: {question.questionText}</p>
+                          {question.options && question.options.length > 0 && (
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                                <Brain className="h-3 w-3" />
+                                Options:
+                              </p>
+                              <ul className="space-y-1">
+                                {question.options.map((option, optIndex) => (
+                                  <li 
+                                    key={optIndex} 
+                                    className={`p-2 rounded border transition-all duration-300 ${option === question.answerText ? 'bg-green-50 border-green-200 text-green-700 scale-[1.02]' : ''}`}
+                                  >
+                                    {option}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <p className="text-sm pt-2 border-t">
+                            <span className="font-medium flex items-center gap-1">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              Answer:
+                            </span> {question.answerText}
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-                  
-                  {question.options && question.options.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Options</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {question.options.map((option, optIndex) => (
-                          <Input
-                            key={optIndex}
-                            value={option}
-                            onChange={(e) => {
-                              const newQuestions = [...editQuestions]
-                              if (!newQuestions[index].options) newQuestions[index].options = []
-                              newQuestions[index].options![optIndex] = e.target.value
-                              setEditQuestions(newQuestions)
-                            }}
-                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`edit-answer-${index}`} className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      Correct Answer
-                    </Label>
-                    <Input
-                      id={`edit-answer-${index}`}
-                      value={question.answerText}
-                      onChange={(e) => {
-                        const newQuestions = [...editQuestions]
-                        newQuestions[index].answerText = e.target.value
-                        setEditQuestions(newQuestions)
-                      }}
-                      className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
-                    />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 animate-fade-in animation-delay-600">
-            <Button 
-              variant="outline" 
-              onClick={() => setEditDialogOpen(false)}
-              className="hover-scale transition-smooth"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => selectedTest && handleUpdateTest(selectedTest.testId!)}
-              disabled={isSubmitting}
-              className="hover-scale transition-smooth group"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Edit className="mr-2 h-4 w-4 group-hover:rotate-180 transition-transform duration-500" />
-                  Update Test
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1107,7 +1171,9 @@ export function TestsPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="animate-fade-in animation-delay-200">
               This action cannot be undone. This will permanently delete the test
-              for material: "{selectedTest?.material?.Content?.Text.substring(0, 50)}..."
+              for material: "{selectedTest?.material?.content?.text?.substring(0, 50) || 
+                            selectedTest?.material?.Content?.Text?.substring(0, 50) || 
+                            'No material'}..."
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="animate-fade-in animation-delay-400">
@@ -1137,83 +1203,93 @@ export function TestsPage() {
           </DialogHeader>
           {selectedTest?.questions && selectedTest.questions.length > 0 ? (
             <div className="space-y-6 py-4">
-              {selectedTest.questions.map((question, index) => (
-                <Card 
-                  key={question.questionId || index} 
-                  className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="shrink-0 animate-pulse-slow">
-                        Q{index + 1}
-                      </Badge>
-                      <p className="font-medium">{question.questionText}</p>
-                    </div>
-                    
-                    {question.options && question.options.length > 0 ? (
-                      <div className="space-y-2 mt-3">
-                        <Label className="text-sm text-muted-foreground">Select the correct answer:</Label>
-                        {question.options.map((option, optIndex) => (
-                          <div key={optIndex} className="flex items-center space-x-2 group/option">
-                            <div className="relative">
-                              <input
-                                type="radio"
-                                id={`answer-${question.questionId || index}-${optIndex}`}
-                                name={`question-${question.questionId || index}`}
-                                value={option}
-                                onChange={(e) => {
-                                  setSubmitFormData({
-                                    ...submitFormData,
-                                    answers: {
-                                      ...submitFormData.answers,
-                                      [question.questionId!]: e.target.value
-                                    }
-                                  })
-                                }}
-                                className="peer hidden"
-                              />
-                              <Label 
-                                htmlFor={`answer-${question.questionId || index}-${optIndex}`}
-                                className={`
-                                  cursor-pointer block p-3 border rounded-lg transition-all duration-300
-                                  hover:scale-[1.02] hover:shadow-md
-                                  peer-checked:bg-primary/10 peer-checked:border-primary peer-checked:text-primary
-                                  peer-checked:scale-[1.03]
-                                `}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="w-4 h-4 rounded-full border-2 border-muted-foreground peer-checked:border-primary peer-checked:bg-primary transition-all"></div>
-                                  <span>{option}</span>
+              {selectedTest.questions.map((question, index) => {
+                const selectedAnswer = submitFormData.answers[question.questionId!];
+                return (
+                  <Card 
+                    key={question.questionId || index} 
+                    className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Badge variant="outline" className="shrink-0 animate-pulse-slow">
+                          Q{index + 1}
+                        </Badge>
+                        <p className="font-medium">{question.questionText}</p>
+                      </div>
+                      
+                      {question.options && question.options.length > 0 ? (
+                        <div className="space-y-2 mt-3">
+                          <Label className="text-sm text-muted-foreground">Select the correct answer:</Label>
+                          {question.options.map((option, optIndex) => {
+                            const isSelected = selectedAnswer === option;
+                            return (
+                              <div key={optIndex} className="flex items-center space-x-2 group/option">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    id={`answer-${question.questionId || index}-${optIndex}`}
+                                    name={`question-${question.questionId || index}`}
+                                    value={option}
+                                    onChange={(e) => {
+                                      setSubmitFormData({
+                                        ...submitFormData,
+                                        answers: {
+                                          ...submitFormData.answers,
+                                          [question.questionId!]: e.target.value
+                                        }
+                                      })
+                                    }}
+                                    className="peer hidden"
+                                  />
+                                  <Label 
+                                    htmlFor={`answer-${question.questionId || index}-${optIndex}`}
+                                    className={`
+                                      cursor-pointer block p-3 border rounded-lg transition-all duration-300
+                                      hover:scale-[1.02] hover:shadow-md
+                                      peer-checked:bg-primary/10 peer-checked:border-primary peer-checked:text-primary
+                                      peer-checked:scale-[1.03]
+                                    `}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {isSelected ? (
+                                        <CircleCheck className="w-4 h-4 text-primary fill-current" />
+                                      ) : (
+                                        <Circle className="w-4 h-4 text-muted-foreground" />
+                                      )}
+                                      <span>{option}</span>
+                                    </div>
+                                  </Label>
                                 </div>
-                              </Label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor={`text-answer-${index}`} className="text-sm">Your Answer:</Label>
-                        <Input
-                          id={`text-answer-${index}`}
-                          value={submitFormData.answers[question.questionId!] || ''}
-                          onChange={(e) => {
-                            setSubmitFormData({
-                              ...submitFormData,
-                              answers: {
-                                ...submitFormData.answers,
-                                [question.questionId!]: e.target.value
-                              }
-                            })
-                          }}
-                          placeholder="Enter your answer"
-                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor={`text-answer-${index}`} className="text-sm">Your Answer:</Label>
+                          <Input
+                            id={`text-answer-${index}`}
+                            value={selectedAnswer || ''}
+                            onChange={(e) => {
+                              setSubmitFormData({
+                                ...submitFormData,
+                                answers: {
+                                  ...submitFormData.answers,
+                                  [question.questionId!]: e.target.value
+                                }
+                              })
+                            }}
+                            placeholder="Enter your answer"
+                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-md"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground animate-fade-in">

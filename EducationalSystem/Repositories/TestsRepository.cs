@@ -71,6 +71,8 @@ public class TestsRepository : ITestsRepository
     {
         return await _context.Tests
             .Include(t => t.Questions)
+            .Include(t => t.Material)
+            .ThenInclude(m => m.Content)
             .OrderBy(t => t.TestId)
             .ToListAsync();
     }

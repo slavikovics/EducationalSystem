@@ -167,7 +167,13 @@ public class EducationalSystemDbContext : DbContext
             .HasOne(t => t.CreatedByUser)
             .WithMany()
             .HasForeignKey(t => t.CreatedByUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Test>()
+            .HasOne(t => t.Material)
+            .WithMany()
+            .HasForeignKey(t => t.MaterialId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Test -> Questions relationship
         modelBuilder.Entity<Test>()
@@ -233,14 +239,14 @@ public class EducationalSystemDbContext : DbContext
             .HasOne(tr => tr.Test)
             .WithMany()
             .HasForeignKey(tr => tr.TestId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         // TestResult -> User relationship
         modelBuilder.Entity<TestResult>()
             .HasOne(tr => tr.User)
             .WithMany(u => u.TestResults)
             .HasForeignKey(tr => tr.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         // JSON conversion for UserAnswers WITH VALUE COMPARER
         modelBuilder.Entity<TestResult>()
