@@ -9,7 +9,9 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { MaterialsPage } from './pages/MaterialsPage';
-import { TestsPage } from './pages/TestsPage';
+import { TestsTablePage } from './pages/TestTablePage';
+import { TestCreatePage } from './pages/TestCreatePage'
+import { TestTakePage } from './pages/TestTakePage'
 import { ReviewsPage } from './pages/ReviewsPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -19,7 +21,6 @@ import { CreateMaterialPage } from './pages/CreateMaterialPage';
 import { EditMaterialContentPage } from './pages/UpdateContentPage';
 import { TestResultPage } from './pages/TestResultsPage';
 
-// Configure QueryClient with default options
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -50,18 +51,19 @@ function App() {
                   <MainLayout />
                 </ProtectedRoute>
               }>
-                // In App.tsx, add this route:
+                
               <Route path="materials/:id" element={
   <ProtectedRoute>
     <ViewMaterialPage />
   </ProtectedRoute>
 } />
-
+                <Route path="/tests" element={<TestsTablePage />} />
+                <Route path="/tests/create" element={<TestCreatePage />} />
+                <Route path="/tests/take/:testId" element={<TestTakePage />} />
 
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="materials" element={<MaterialsPage />} />
-                <Route path="tests" element={<TestsPage />} />
                 <Route path="test-results" element={<TestResultPage />}/>
                 <Route path="reviews" element={<ReviewsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
@@ -70,14 +72,6 @@ function App() {
                 <Route path="users" element={
                   <ProtectedRoute requiredRole="Admin">
                     <UsersPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="admin" element={
-                  <ProtectedRoute requiredRole="Admin">
-                    <div className="p-6">
-                      <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
-                      <p>Admin-specific features and settings.</p>
-                    </div>
                   </ProtectedRoute>
                 } />
 

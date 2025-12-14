@@ -13,8 +13,9 @@ public class User
 
     [Required] [EmailAddress] public string Email { get; set; } = string.Empty;
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public UserStatus Status { get; set; } = UserStatus.Active;
-
+    
     public string UserType { get; set; } = "User";
 
     [JsonIgnore] public virtual ICollection<Material>? Materials { get; set; }

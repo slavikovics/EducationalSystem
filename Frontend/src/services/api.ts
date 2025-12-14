@@ -435,33 +435,80 @@ export const reviewsAPI = {
   },
 };
 
-// Users API (Note: These endpoints might not exist in backend)
 export const usersAPI = {
   getAll: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/users');
+      const response = await api.get('/users/get-all');
+      console.log(response);
       return normalizeResponse(response);
     } catch (error: any) {
-      return {
-        success: false,
-        error: 'Endpoint not available',
-        data: []
-      };
+      return Promise.reject(normalizeResponse(error));
     }
   },
   
   getById: async (id: number): Promise<ApiResponse> => {
     try {
-      const response = await api.get(`/users/${id}`);
+      const response = await api.get(`/users/get-by-id/${id}`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return Promise.reject(normalizeResponse(error));
+    }
+  },
+
+  blockUser: async (id: number): Promise<ApiResponse<{ 
+    message: string; 
+    userId: number;
+    name: string;
+    status: string;
+  }>> => {
+    try {
+      const response = await api.patch(`/users/${id}/block`);
       return normalizeResponse(response);
     } catch (error: any) {
       return {
         success: false,
-        error: 'Endpoint not available',
+        error: error.response?.data?.Error || 'Failed to block user',
+        message: error.response?.data?.Message || 'Network error',
         data: null
       };
     }
   },
+  
+  unblockUser: async (id: number): Promise<ApiResponse<{ 
+    message: string; 
+    userId: number;
+    name: string;
+    status: string;
+  }>> => {
+    try {
+      const response = await api.patch(`/users/${id}/unblock`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.Error || 'Failed to unblock user',
+        message: error.response?.data?.Message || 'Network error',
+        data: null
+      };
+    }
+  },
+  
+  deleteUser: async (id: number): Promise<ApiResponse<{ 
+    message: string; 
+    deletedUserId: number;
+  }>> => {
+    try {
+      const response = await api.delete(`/users/${id}`);
+      return normalizeResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.Error || 'Failed to delete user',
+        message: error.response?.data?.Message || 'Network error',
+        data: null
+      };
+    }
+  }
 };
 
 export default api;

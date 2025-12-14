@@ -7,8 +7,7 @@ export interface User {
   email: string;
   password?: string;
   status?: 'Active' | 'Blocked';
-  role?: 'User' | 'Tutor' | 'Admin';
-  userType?: string;
+  userType?: 'User' | 'Tutor' | 'Admin';
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;

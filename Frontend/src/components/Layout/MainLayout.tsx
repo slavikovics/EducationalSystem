@@ -91,8 +91,7 @@ export const MainLayout: React.FC = () => {
   ];
 
   const adminNavigation = [
-    { name: 'User Management', href: '/users', icon: Users, roles: ['Admin'] },
-    { name: 'System Settings', href: '/admin', icon: Settings, roles: ['Admin'] },
+    { name: 'User Management', href: '/users', icon: Users, roles: ['Admin'] }
   ];
 
   const tutorNavigation = [
