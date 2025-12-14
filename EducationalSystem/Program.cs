@@ -75,16 +75,23 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        logger.LogInformation("Applying migrations...");
-        await dbContext.Database.MigrateAsync();
-        logger.LogInformation("Migrations applied successfully");
+        logger.LogInformation("Applying database migrations...");
+
+        var pendingMigrations = dbContext.Database.GetPendingMigrations();
+        if (pendingMigrations.Any())
+        {
+            logger.LogInformation("Applying {Count} pending migrations...", pendingMigrations.Count());
+            dbContext.Database.Migrate();
+            logger.LogInformation("Migrations applied successfully");
+        }
+        else
+        {
+            logger.LogInformation("No pending migrations");
+        }
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error applying migrations");
-
-        if (!app.Environment.IsDevelopment())
-            throw;
+        logger.LogError(ex, "An error occurred while applying migrations");
     }
 }
 
