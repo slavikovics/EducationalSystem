@@ -349,7 +349,7 @@ export function TestsTablePage({ onViewTest, onTakeTest, onCreateTest }: TestsTa
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className='overflow-hidden'>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Test ID</TableHead>
@@ -405,11 +405,6 @@ export function TestsTablePage({ onViewTest, onTakeTest, onCreateTest }: TestsTa
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {isAdminOrTutor && (
-                          <Button variant="ghost" size="sm" onClick={() => onViewTest && onViewTest(test)} className="hover-scale transition-smooth" title="View Test Details">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button variant="ghost" size="sm" onClick={() => handleTakeTest(test)} className="hover-scale transition-smooth" title="Take Test">
                           <GraduationCap className="h-4 w-4" />
                         </Button>
