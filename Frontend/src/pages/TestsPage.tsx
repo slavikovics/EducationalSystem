@@ -257,7 +257,8 @@ export function TestsPage() {
       setIsLoading(true)
       clearErrors()
       const response = await testsAPI.getAll() as ApiResponse<Test[]>
-      
+      console.log(response)
+
       if (response.success || response.data) {
         const testsData = response.data || response.Test || []
         setTests(Array.isArray(testsData) ? testsData : [testsData])
@@ -691,7 +692,7 @@ export function TestsPage() {
                 <div className="text-2xl font-bold animate-count-up">{filteredTests.length}</div>
                 <p className="text-sm text-muted-foreground">Total Tests</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <FileText className="h-5 w-5 text-blue-600" />
               </div>
             </div>
@@ -707,7 +708,7 @@ export function TestsPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">Total Questions</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-green-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <Target className="h-5 w-5 text-green-600" />
               </div>
             </div>
@@ -721,7 +722,7 @@ export function TestsPage() {
                 <div className="text-2xl font-bold animate-count-up animation-delay-400">{materials.length}</div>
                 <p className="text-sm text-muted-foreground">Materials</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <BookOpen className="h-5 w-5 text-purple-600" />
               </div>
             </div>
@@ -737,7 +738,7 @@ export function TestsPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">Advanced Tests</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <Award className="h-5 w-5 text-yellow-600" />
               </div>
             </div>
@@ -817,7 +818,7 @@ export function TestsPage() {
                     <TableCell>
                       <Badge 
                         variant="outline" 
-                        className={`${difficulty.color} hover:scale-105 transition-transform`}
+                        className={`hover:scale-105 transition-transform`}
                       >
                         {difficulty.text}
                       </Badge>
@@ -829,7 +830,7 @@ export function TestsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex justify-end gap-1">
                         {isAdminOrTutor && (
                           <Button
                             variant="ghost"
@@ -1136,7 +1137,7 @@ export function TestsPage() {
                                 {question.options.map((option, optIndex) => (
                                   <li 
                                     key={optIndex} 
-                                    className={`p-2 rounded border transition-all duration-300 ${option === question.answerText ? 'bg-green-50 border-green-200 text-green-700 scale-[1.02]' : ''}`}
+                                    className={`p-2 rounded border transition-all duration-300 ${option === question.answerText ? 'border-green-200 text-green-700 scale-[1.02]' : ''}`}
                                   >
                                     {option}
                                   </li>
@@ -1144,12 +1145,6 @@ export function TestsPage() {
                               </ul>
                             </div>
                           )}
-                          <p className="text-sm pt-2 border-t">
-                            <span className="font-medium flex items-center gap-1">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              Answer:
-                            </span> {question.answerText}
-                          </p>
                         </div>
                       </Card>
                     ))}

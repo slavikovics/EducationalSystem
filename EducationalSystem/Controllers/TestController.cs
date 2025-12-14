@@ -107,7 +107,7 @@ public class TestController : ControllerBase
     }
 
     [HttpPost("{testId}/submit")]
-    [Authorize(Roles = "User,Student,Tutor,Admin")] // Any authenticated user can take tests
+    [Authorize(Roles = "User,Student,Tutor,Admin")]
     public async Task<IActionResult> SubmitTest(long testId, [FromBody] TestSubmissionDto submission)
     {
         try

@@ -152,6 +152,7 @@ export function TestResultPage() {
       
       if (response.success || response.data) {
         const resultData = response.data || response.TestResult
+        console.log(resultData)
         setSelectedResult(resultData)
         return resultData
       } else {
@@ -400,7 +401,7 @@ export function TestResultPage() {
                 <div className="text-2xl font-bold animate-count-up">{filteredResults.length}</div>
                 <p className="text-sm text-muted-foreground">Total Results</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
               </div>
             </div>
@@ -416,7 +417,7 @@ export function TestResultPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">Total Points</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-green-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <Target className="h-5 w-5 text-green-600" />
               </div>
             </div>
@@ -434,7 +435,7 @@ export function TestResultPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">Average Score</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <Percent className="h-5 w-5 text-purple-600" />
               </div>
             </div>
@@ -450,7 +451,7 @@ export function TestResultPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">Unique Tests</p>
               </div>
-              <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-accent group-hover:scale-110 transition-transform">
                 <Award className="h-5 w-5 text-yellow-600" />
               </div>
             </div>
@@ -488,7 +489,6 @@ export function TestResultPage() {
                   <TableHead>Score</TableHead>
                   <TableHead>Performance</TableHead>
                   <TableHead>Submitted</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -545,7 +545,7 @@ export function TestResultPage() {
                       <TableCell>
                         <Badge 
                           variant="outline" 
-                          className={`${performance.color} hover:scale-105 transition-transform flex items-center gap-1`}
+                          className={`$hover:scale-105 transition-transform flex items-center gap-1`}
                         >
                           <PerformanceIcon className="h-3 w-3" />
                           {performance.text}
@@ -560,19 +560,6 @@ export function TestResultPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewResult(result)}
-                            className="hover-scale transition-smooth"
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   )
                 })}
@@ -581,202 +568,6 @@ export function TestResultPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* View Result Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-3xl animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 animate-fade-in">
-              <Eye className="h-5 w-5 text-primary" />
-              Test Result Details
-            </DialogTitle>
-            <DialogDescription className="animate-fade-in animation-delay-200">
-              Result ID: #{selectedResult?.testResultId}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedResult && (
-            <div className="space-y-6 animate-fade-in animation-delay-300">
-              {/* Result Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-4 hover:shadow-lg transition-all duration-300">
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      User
-                    </Label>
-                    <p className="font-medium">
-                      {selectedResult.user?.name || `User #${selectedResult.userId}`}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedResult.user?.email || 'No email available'}
-                    </p>
-                  </div>
-                </Card>
-                
-                <Card className="p-4 hover:shadow-lg transition-all duration-300">
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground flex items-center gap-1">
-                      <FileText className="h-4 w-4" />
-                      Test
-                    </Label>
-                    <p className="font-medium">
-                      {selectedResult.test?.material?.Content?.Text?.substring(0, 50) || 
-                       selectedResult.test?.material?.content?.text?.substring(0, 50) || 
-                       `Test #${selectedResult.testId}`}...
-                    </p>
-                  </div>
-                </Card>
-                
-                <Card className="p-4 hover:shadow-lg transition-all duration-300">
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Submitted
-                    </Label>
-                    <p className="font-medium">
-                      {new Date(selectedResult.submittedAt).toLocaleDateString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(selectedResult.submittedAt).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </Card>
-              </div>
-              
-              {/* Score Card */}
-              <Card className="p-6 bg-gradient-to-r from-muted/50 to-background hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-yellow-600" />
-                      Test Score
-                    </h4>
-                    <div className="text-4xl font-bold">
-                      {selectedResult.score}/{selectedResult.totalQuestions}
-                    </div>
-                    <div className="text-2xl font-semibold">
-                      {Math.round((selectedResult.score / selectedResult.totalQuestions) * 100)}%
-                    </div>
-                  </div>
-                  <div className="relative w-32 h-32">
-                    <svg className="w-full h-full" viewBox="0 0 100 100">
-                      <circle
-                        className="text-muted stroke-current"
-                        strokeWidth="10"
-                        fill="transparent"
-                        r="40"
-                        cx="50"
-                        cy="50"
-                      />
-                      <circle
-                        className="text-primary stroke-current"
-                        strokeWidth="10"
-                        strokeLinecap="round"
-                        fill="transparent"
-                        r="40"
-                        cx="50"
-                        cy="50"
-                        strokeDasharray={`${(selectedResult.score / selectedResult.totalQuestions) * 251.2} 251.2`}
-                        transform="rotate(-90 50 50)"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold">
-                        {Math.round((selectedResult.score / selectedResult.totalQuestions) * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              
-              {/* User Answers */}
-              {selectedResult.test?.questions && selectedResult.test.questions.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Brain className="h-4 w-4" />
-                    Question Analysis
-                  </h4>
-                  {selectedResult.test.questions.map((question, index) => {
-                    const userAnswer = selectedResult.userAnswers[question.questionId!]
-                    const isCorrect = userAnswer === question.answerText
-                    
-                    return (
-                      <Card 
-                        key={question.questionId || index} 
-                        className="p-4 hover:shadow-lg transition-all duration-300 animate-fade-in"
-                        style={{ animationDelay: `${index * 100}ms` }}
-                      >
-                        <div className="space-y-3">
-                          <p className="font-medium">Q{index + 1}: {question.questionText}</p>
-                          
-                          <div className="grid grid-cols-2 gap-2">
-                            {question.options?.map((option, optIndex) => {
-                              const isUserAnswer = option === userAnswer
-                              const isCorrectAnswer = option === question.answerText
-                              
-                              return (
-                                <div 
-                                  key={optIndex}
-                                  className={`p-2 rounded border transition-all duration-300 ${
-                                    isUserAnswer && isCorrectAnswer 
-                                      ? 'bg-green-50 border-green-200 text-green-700 scale-[1.02]' 
-                                      : isUserAnswer 
-                                        ? 'bg-red-50 border-red-200 text-red-700 scale-[1.02]'
-                                        : isCorrectAnswer
-                                          ? 'bg-green-50 border-green-200 text-green-700'
-                                          : ''
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    {isCorrectAnswer && (
-                                      <CheckCircle className="h-4 w-4 text-green-600" />
-                                    )}
-                                    {isUserAnswer && !isCorrectAnswer && (
-                                      <AlertCircle className="h-4 w-4 text-red-600" />
-                                    )}
-                                    <span>{option}</span>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                          
-                          <div className="pt-2 border-t">
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium flex items-center gap-1">
-                                {isCorrect ? (
-                                  <>
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                    Correct Answer:
-                                  </>
-                                ) : (
-                                  <>
-                                    <AlertCircle className="h-4 w-4 text-red-600" />
-                                    Your Answer:
-                                  </>
-                                )}
-                              </span> 
-                              <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
-                                {userAnswer || 'Not answered'}
-                              </span>
-                              {!isCorrect && question.answerText && (
-                                <>
-                                  <span className="text-muted-foreground">• Correct:</span>
-                                  <span className="text-green-700">{question.answerText}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

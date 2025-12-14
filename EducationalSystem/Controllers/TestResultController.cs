@@ -34,4 +34,20 @@ public class TestResultController : ControllerBase
             return StatusCode(500, new { Error = "Internal server error" }); 
         }
     }
+    
+    [HttpGet("{id}")]
+    [Authorize(Roles = "User,Tutor,Admin")]
+    public async Task<IActionResult> GetAllTestResults(int resultId)
+    {
+        try
+        {
+            var results = await _context.TestResults.Where(x => x.TestId == resultId).ToListAsync();
+            return Ok(results.FirstOrDefault());
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e.Message);
+            return StatusCode(500, new { Error = "Internal server error" }); 
+        }
+    }
 }

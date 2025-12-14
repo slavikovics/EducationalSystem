@@ -993,7 +993,7 @@ export const ReviewsPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewReview(review)}
-                      className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                      className="transition-all duration-300 hover:scale-110"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -1003,7 +1003,7 @@ export const ReviewsPage: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                            className="transition-all duration-300 hover:scale-110"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>

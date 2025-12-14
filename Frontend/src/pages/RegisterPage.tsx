@@ -341,25 +341,13 @@ export const RegisterPage: React.FC = () => {
               <Alert 
                 variant="destructive" 
                 className={`
-                  mb-6 animate-shake border-l-4 border-l-destructive
+                  mb-6 bg-background animate-shake border-l-4 border-l-destructive
                   transform transition-all duration-500
                   ${error ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
                 `}
               >
                 <AlertCircle className="h-4 w-4 animate-pulse" />
                 <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {success && (
-              <Alert 
-                className={`
-                  mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200
-                  animate-bounce-in
-                `}
-              >
-                <CheckCircle className="h-4 w-4 text-green-600 animate-pulse" />
-                <AlertDescription className="text-green-800">{success}</AlertDescription>
               </Alert>
             )}
 

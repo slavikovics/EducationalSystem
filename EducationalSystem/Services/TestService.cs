@@ -6,10 +6,12 @@ namespace EducationalSystem.Services;
 public class TestService : ITestService
 {
     private readonly ITestsRepository _testsRepository;
+    private readonly ILogger<TestService> _logger;
 
-    public TestService(ITestsRepository testsRepository)
+    public TestService(ITestsRepository testsRepository, ILogger<TestService> logger)
     {
         _testsRepository = testsRepository;
+        _logger = logger;
     }
 
     public async Task<Test> CreateTest(long materialId, List<Question> questions, long createdByUserId)
@@ -45,17 +47,15 @@ public class TestService : ITestService
     public async Task<TestResult> SubmitTest(long testId, long userId, Dictionary<int, string> answers)
     {
         var test = await _testsRepository.GetTestById(testId);
+        _logger.LogInformation($"Answers: {answers}");
         
         int score = 0;
         foreach (var (questionIndex, userAnswer) in answers)
         {
-            if (questionIndex >= 0 && questionIndex < test.Questions.Count)
+            var question = test.Questions.FirstOrDefault(q => q.QuestionId == questionIndex);
+            if (question is not null && question.AnswerText.Equals(userAnswer, StringComparison.OrdinalIgnoreCase))
             {
-                var question = test.Questions[questionIndex];
-                if (question.AnswerText.Equals(userAnswer, StringComparison.OrdinalIgnoreCase))
-                {
-                    score++;
-                }
+                score++;
             }
         }
 
@@ -69,7 +69,6 @@ public class TestService : ITestService
             SubmittedAt = DateTime.UtcNow
         };
 
-        // Save the test result
         return await _testsRepository.SaveTestResult(testResult);
     }
 }

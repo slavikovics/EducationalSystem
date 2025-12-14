@@ -462,7 +462,7 @@ export const MaterialsPage: React.FC = () => {
           {/* Desktop View */}
           <div className="hidden lg:block animate-fade-in animation-delay-500">
             <div className="rounded-lg border overflow-hidden">
-              <Table>
+              <Table className='overflow-hidden'>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[35%]">Description</TableHead>
@@ -503,8 +503,8 @@ export const MaterialsPage: React.FC = () => {
                         <Badge 
                           variant="outline" 
                           className={`
-                            flex items-center gap-1 w-fit transition-all duration-300
-                            hover:scale-105 ${getCategoryColor(material.category)}
+                            flex items-center bg-gradient-to-br from-primary/10 to-secondary/10 gap-1 w-fit transition-all duration-300
+                            hover:scale-105}
                           `}
                         >
                           {getCategoryIcon(material.category)}
@@ -523,7 +523,7 @@ export const MaterialsPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="p-1 rounded-full bg-gradient-to-br from-gray-100 to-gray-50">
+                          <div className="p-1 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <span className="text-sm font-medium">
