@@ -1,4 +1,5 @@
 # EduSystem
+![Dark Theme](./Images/dashboard_dark.jpg)
 
 A full-stack learning platform with role-based access (User/Tutor/Admin) for creating materials, tests, and tracking progress.
 
