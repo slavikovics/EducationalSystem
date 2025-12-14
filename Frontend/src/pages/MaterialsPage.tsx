@@ -140,7 +140,7 @@ export const MaterialsPage: React.FC = () => {
           text: material.content?.text || material.text || material.description || 'No description',
           mediaFiles: material.content?.mediaFiles || material.mediaFiles || [],
         },
-        category: material.category,
+        category: material.category + 1,
         user: material.user
       }));
       

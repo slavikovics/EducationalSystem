@@ -24,7 +24,6 @@ public class EducationalSystemDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure User inheritance (TPH - Table Per Hierarchy)
         modelBuilder.Entity<User>()
             .ToTable("Users")
             .HasDiscriminator<string>("UserType")
@@ -32,7 +31,6 @@ public class EducationalSystemDbContext : DbContext
             .HasValue<Admin>("Admin")
             .HasValue<Tutor>("Tutor");
 
-        // Configure User properties
         modelBuilder.Entity<User>()
             .Property(u => u.Name)
             .IsRequired()
@@ -57,13 +55,11 @@ public class EducationalSystemDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
-        // Configure Admin-specific properties
         modelBuilder.Entity<Admin>()
             .Property(a => a.AccessKey)
             .IsRequired()
             .HasMaxLength(100);
 
-        // Configure Tutor-specific properties
         modelBuilder.Entity<Tutor>()
             .Property(t => t.Experience)
             .IsRequired();
@@ -73,7 +69,6 @@ public class EducationalSystemDbContext : DbContext
             .IsRequired()
             .HasMaxLength(100);
 
-        // Configure Material
         modelBuilder.Entity<Material>()
             .ToTable("Materials")
             .HasKey(m => m.MaterialId);
@@ -87,21 +82,18 @@ public class EducationalSystemDbContext : DbContext
             .HasConversion<string>()
             .HasMaxLength(50);
 
-        // Material -> User relationship
         modelBuilder.Entity<Material>()
             .HasOne(m => m.User)
             .WithMany(u => u.Materials)
             .HasForeignKey(m => m.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Material -> Content relationship
         modelBuilder.Entity<Material>()
             .HasOne(m => m.Content)
             .WithOne()
             .HasForeignKey<Material>(m => m.ContentId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Configure Content
         modelBuilder.Entity<Content>()
             .ToTable("Contents")
             .HasKey(c => c.ContentId);
@@ -110,7 +102,6 @@ public class EducationalSystemDbContext : DbContext
             .Property(c => c.Text)
             .HasColumnType("text");
 
-        // JSON conversion for MediaFiles WITH VALUE COMPARER
         modelBuilder.Entity<Content>()
             .Property(c => c.MediaFiles)
             .HasConversion(
@@ -122,7 +113,6 @@ public class EducationalSystemDbContext : DbContext
                     c => c.ToList()))
             .HasColumnType("text");
 
-        // Configure Review
         modelBuilder.Entity<Review>()
             .ToTable("Reviews")
             .HasKey(r => r.ReviewId);
@@ -137,7 +127,6 @@ public class EducationalSystemDbContext : DbContext
             .Property(r => r.CreatedAt)
             .IsRequired();
         
-        // Review -> Content relationship
         modelBuilder.Entity<Review>()
             .HasOne(r => r.Content)
             .WithOne()
@@ -149,7 +138,6 @@ public class EducationalSystemDbContext : DbContext
             .WithMany(u => u.Reviews)
             .HasForeignKey(r => r.UserId);
 
-        // Configure Test
         modelBuilder.Entity<Test>()
             .ToTable("Tests")
             .HasKey(t => t.TestId);
@@ -162,7 +150,6 @@ public class EducationalSystemDbContext : DbContext
             .Property(t => t.PassingScore)
             .IsRequired();
 
-        // Test -> User relationship (CreatedBy)
         modelBuilder.Entity<Test>()
             .HasOne(t => t.CreatedByUser)
             .WithMany()
@@ -175,14 +162,12 @@ public class EducationalSystemDbContext : DbContext
             .HasForeignKey(t => t.MaterialId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Test -> Questions relationship
         modelBuilder.Entity<Test>()
             .HasMany(t => t.Questions)
             .WithOne(q => q.Test)
             .HasForeignKey(q => q.TestId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Configure Question
         modelBuilder.Entity<Question>()
             .ToTable("Questions")
             .HasKey(q => q.QuestionId);
@@ -197,7 +182,6 @@ public class EducationalSystemDbContext : DbContext
             .IsRequired()
             .HasMaxLength(500);
 
-        // JSON conversion for Options WITH VALUE COMPARER
         modelBuilder.Entity<Question>()
             .Property(q => q.Options)
             .HasConversion(
@@ -209,7 +193,6 @@ public class EducationalSystemDbContext : DbContext
                     c => c.ToList()))
             .HasColumnType("text");
 
-        // Configure TestResult
         modelBuilder.Entity<TestResult>()
             .ToTable("TestResults")
             .HasKey(tr => tr.TestResultId);
@@ -226,21 +209,18 @@ public class EducationalSystemDbContext : DbContext
             .Property(tr => tr.SubmittedAt)
             .IsRequired();
 
-        // TestResult -> Test relationship
         modelBuilder.Entity<TestResult>()
             .HasOne(tr => tr.Test)
             .WithMany()
             .HasForeignKey(tr => tr.TestId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // TestResult -> User relationship
         modelBuilder.Entity<TestResult>()
             .HasOne(tr => tr.User)
             .WithMany(u => u.TestResults)
             .HasForeignKey(tr => tr.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // JSON conversion for UserAnswers WITH VALUE COMPARER
         modelBuilder.Entity<TestResult>()
             .Property(tr => tr.UserAnswers)
             .HasConversion(
