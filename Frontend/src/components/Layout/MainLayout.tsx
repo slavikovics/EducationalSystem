@@ -14,7 +14,6 @@ import {
   X,
   Settings,
   ClipboardCheck,
-  GraduationCap,
   ChevronRight,
   ChevronDown,
   School,
